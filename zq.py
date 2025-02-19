@@ -5,6 +5,7 @@ import asyncio
 import re
 import json
 import os
+import random
 
 
 async def zq_user(client, event):
@@ -40,6 +41,15 @@ async def zq_user(client, event):
         variable.explode = int(my[1])
         variable.stop = int(my[2])
         variable.stop_count = int(my[2])
+        mes = f"""设置成功"""
+        message = await client.send_message(config.user, mes, parse_mode="markdown")
+        await asyncio.sleep(10)
+        m = event.message
+        await m.delete()
+        await message.delete()
+        return
+    if "ms" == my[0]:
+        variable.mode = int(my[1])
         mes = f"""设置成功"""
         message = await client.send_message(config.user, mes, parse_mode="markdown")
         await asyncio.sleep(10)
@@ -129,12 +139,15 @@ async def zq_user(client, event):
 
 async def zq_bet_on(client, event):
     await asyncio.sleep(5)
-    if variable.bet_on:
+    if variable.bet_on or (variable.mode and variable.mode_stop):
         # 判断是否是开盘信息
         if event.reply_markup:
             print(f"开始押注！")
             # 获取压大还是小
-            check = predict_next_trend(variable.history)
+            if variable.mode:
+                check = predict_next_combined_trend(variable.history)
+            else:
+                check = predict_next_trend(variable.history)
             print(f"本次押注：{check}")
             # 获取押注金额 根据连胜局数和底价进行计算
             variable.bet_amount = calculate_bet_amount(variable.win_count, variable.lose_count,
@@ -149,8 +162,8 @@ async def zq_bet_on(client, event):
                 variable.bet = True
                 await bet(check, com, event)
                 mes = f"""
-                    ⚡ 押注： {"押大" if check else "押小"}
-💵 金额： {variable.bet_amount}
+                    **⚡ 押注： {"押大" if check else "押小"}
+💵 金额： {variable.bet_amount}**
                     """
                 await client.send_message(config.user, mes, parse_mode="markdown")
                 variable.mark = True
@@ -162,6 +175,23 @@ async def zq_bet_on(client, event):
                 variable.bet = False
     else:
         variable.bet = False
+
+
+def predict_next_combined_trend(history):
+    """
+    长短期趋势结合 获取押注大小
+    """
+    if len(history) < 10:
+        return random.choice([0, 1])
+
+    short_term = sum(history[-3:])
+    long_term = sum(history[-10:])
+    if short_term >= 2 and long_term >= 6:
+        return 1
+    elif short_term <= 1 and long_term <= 4:
+        return 0
+    else:
+        return random.choice([0, 1])
 
 
 def predict_next_trend(history):
@@ -176,13 +206,13 @@ def calculate_bet_amount(win_count, lose_count, initial_amount, lose_stop, lose_
         if (lose_count + 1) > lose_stop:
             return 0
         if lose_count == 1:
-            return closest_multiple_of_500(variable.bet_amount * lose_once)
+            return closest_multiple_of_500(variable.bet_amount * lose_once + (variable.bet_amount * lose_once * 0.01))
         if lose_count >= 2:
-            return closest_multiple_of_500(variable.bet_amount * lose_twice)
+            return closest_multiple_of_500(variable.bet_amount * lose_twice + (variable.bet_amount * lose_once * 0.99))
         if lose_count == 3:
-            return closest_multiple_of_500(variable.bet_amount * lose_three)
+            return closest_multiple_of_500(variable.bet_amount * lose_three + (variable.bet_amount * lose_once * 0.99))
         if lose_count >= 4:
-            return closest_multiple_of_500(variable.bet_amount * lose_four)
+            return closest_multiple_of_500(variable.bet_amount * lose_four + (variable.bet_amount * lose_once * 0.99))
 
 
 def find_combination(target):
@@ -256,6 +286,7 @@ async def zq_settle(client, event):
             if variable.stop_count > 1:
                 variable.stop_count -= 1
                 variable.bet_on = False
+                variable.mode_stop = False
                 mes = f"""还剩 {variable.stop_count} 局恢复押注"""
                 m = await client.send_message('me', mes, parse_mode="markdown")
                 await asyncio.sleep(20)
@@ -263,6 +294,7 @@ async def zq_settle(client, event):
             else:
                 variable.explode_count = 0
                 variable.stop_count = variable.stop
+                variable.mode_stop = True
                 variable.win_count = 0
                 variable.lose_count = 0
                 mes = f"""恢复押注"""
@@ -300,26 +332,15 @@ async def zq_settle(client, event):
                 variable.message3 = await client.send_message(config.user, mes, parse_mode="markdown")
         reversed_data = ["✅" if x == 1 else "❌" for x in variable.history[-40::][::-1]]  # 倒序列表
         mes = f"""
-        📊 **近期 40 次结果**（由近及远）  
-✅：大（1）  ❌：小（0）
-
-{os.linesep.join(
+        📊 **近期 40 次结果**（由近及远）\n✅：大（1）  ❌：小（0）\n{os.linesep.join(
             " ".join(map(str, reversed_data[i:i + 10]))
             for i in range(0, len(reversed_data), 10)
-        )}
-
-———————————————
-🎯 **策略设定**  
-💰 **初始金额**：{variable.initial_amount}  
-🔄 **{variable.continuous}连反压**  
-⏹ **押 {variable.lose_stop} 次停止**  
-💥 **炸 {variable.explode} 次暂停**  
-🚫 **暂停 {variable.stop} 局**  
-📉 **输 1 次：倍数 {variable.lose_once}**
-📉 **输 2 次：倍数 {variable.lose_twice}**
-📉 **输 3 次：倍数 {variable.lose_three}**
-📉 **输 4 次：倍数 {variable.lose_four}**
-        """
+        )}\n\n———————————————\n🎯 **策略设定**\n💰 **初始金额**：{variable.initial_amount}\n"""
+        if variable.mode == 0:
+            mes += f"""🎰 **押注模式 反投**\n🔄 **{variable.continuous} 连反压**\n⏹ **押 {variable.lose_stop} 次停止**\n"""
+        else:
+            mes += f"""🎰 **押注模式 预测**\n⏹ **押 {variable.lose_stop} 次停止**\n"""
+        mes += f"""💥 **炸 {variable.explode} 次暂停**\n🚫 **暂停 {variable.stop} 局**\n📉 **输 1 次：倍数 {variable.lose_once}**\n📉 **输 2 次：倍数 {variable.lose_twice}**\n📉 **输 3 次：倍数 {variable.lose_three}**\n📉 **输 4 次：倍数 {variable.lose_four}**"""
         variable.message = await client.send_message(config.user, mes, parse_mode="markdown")
         # 根据是否押注来统计 胜率和押注局数
         if variable.bet:
@@ -351,17 +372,17 @@ async def zq_settle(client, event):
                 await variable.message2.delete()
             # 发送相关信息
             mes = f"""
-            🎲 结果： {event.pattern_match.group(2)}
-📉 输赢统计： {"赢" if status else "输"} {int(variable.bet_amount * 0.99) if status else variable.bet_amount}
-            """
-            await client.send_message(config.user, mes, parse_mode="markdown")
-
-            mes = f"""
-            🎯 押注次数：{variable.total}
+            **🎯 押注次数：{variable.total}
 🏆 胜率：{variable.win_total / variable.total * 100:.2f}%
-💰 收益：{variable.earnings}
+💰 收益：{variable.earnings}**
             """
             variable.message2 = await client.send_message(config.user, mes, parse_mode="markdown")
+
+            mes = f"""
+            **📉 输赢统计： {"赢" if status else "输"} {int(variable.bet_amount * 0.99) if status else variable.bet_amount}
+🎲 结果： {event.pattern_match.group(2)}**
+            """
+            await client.send_message(config.user, mes, parse_mode="markdown")
 
 
 async def qz_red_packet(client, event, functions):
@@ -543,14 +564,14 @@ async def zq_shoot(client, event):
                 # 生成捐赠榜文本
                 donation_list = f"```感谢 {user_name} 大佬赏赐的: {format_number(int(amount))} 爱心\n"
                 donation_list += f"大佬您共赏赐了小弟: {user["count"]} 次,共计: {format_number(user["amount"])} 爱心\n"
-                donation_list += f"您是{config.name}个人打赏总榜的Top: {index+1}\n\n"
+                donation_list += f"您是{config.name}个人打赏总榜的Top: {index + 1}\n\n"
                 donation_list += f"当前{config.name}个人总榜Top: 5 为\n"
                 # 添加总榜 Top 5
                 for i, item in enumerate(sorted_data[:5], start=1):
                     name = item['name']
                     count = item['count']
                     am = item['amount']
-                    donation_list += f"     总榜Top {i}: {mask_if_less(int(amount) , config.top, name)} 大佬共赏赐小弟: {mask_if_less(int(amount) , config.top,count)} 次,共计: {mask_if_less(int(amount) , config.top,format_number(int(am)))} 爱心\n"
+                    donation_list += f"     总榜Top {i}: {mask_if_less(int(amount), config.top, name)} 大佬共赏赐小弟: {mask_if_less(int(amount), config.top, count)} 次,共计: {mask_if_less(int(amount), config.top, format_number(int(am)))} 爱心\n"
                 donation_list += f"\n单次打赏>={format_number(config.top)}魔力查看打赏榜，感谢大佬，并期待您的下次打赏\n"
                 donation_list += f"小弟给大佬您共孝敬了: {user["-count"]} 次,共计: {format_number(user["-amount"])} 爱心"
                 donation_list += f"\n二狗哥出品，必属精品```"
@@ -558,8 +579,10 @@ async def zq_shoot(client, event):
                 await asyncio.sleep(20)
                 await ms.delete()
 
+
 def format_number(number: int) -> str:
     return f"{number:,}"
+
 
 def mask_if_less(num1: int, num2: int, s) -> str:
     """
@@ -574,6 +597,7 @@ def mask_if_less(num1: int, num2: int, s) -> str:
 
     # 判断条件，如果 num1 小于 num2，返回等长的 '*'
     return '*' * len(s) if num1 < num2 else s
+
 
 # 初始数据结构
 data = {
