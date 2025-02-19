@@ -208,11 +208,11 @@ def calculate_bet_amount(win_count, lose_count, initial_amount, lose_stop, lose_
         if lose_count == 1:
             return closest_multiple_of_500(variable.bet_amount * lose_once + (variable.bet_amount * lose_once * 0.01))
         if lose_count >= 2:
-            return closest_multiple_of_500(variable.bet_amount * lose_twice + (variable.bet_amount * lose_once * 0.99))
+            return closest_multiple_of_500(variable.bet_amount * lose_twice + (variable.bet_amount * lose_twice * 0.01))
         if lose_count == 3:
-            return closest_multiple_of_500(variable.bet_amount * lose_three + (variable.bet_amount * lose_once * 0.99))
+            return closest_multiple_of_500(variable.bet_amount * lose_three + (variable.bet_amount * lose_three * 0.01))
         if lose_count >= 4:
-            return closest_multiple_of_500(variable.bet_amount * lose_four + (variable.bet_amount * lose_once * 0.99))
+            return closest_multiple_of_500(variable.bet_amount * lose_four + (variable.bet_amount * lose_four * 0.01))
 
 
 def find_combination(target):
