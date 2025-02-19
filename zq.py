@@ -267,8 +267,6 @@ async def zq_settle(client, event):
         print(f"{event.pattern_match.group(2)}")
         if variable.open_ydx:
             await client.send_message(config.group, '/ydx')
-            await asyncio.sleep(2)
-            await event.message.delete()
         # 存储历史记录
         if len(variable.history) >= 1000:
             del variable.history[:5]
@@ -428,8 +426,9 @@ def whether_bet_on(win_times, lose_times):
         variable.bet_on = True
     else:
         variable.bet_on = False
-        variable.win_count = 0
-        variable.lose_count = 0
+        if variable.mode == 0:
+            variable.win_count = 0
+            variable.lose_count = 0
 
 
 def count_consecutive(data):
