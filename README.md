@@ -20,7 +20,7 @@ python3 -m venv myenv
 source myenv/bin/activate
 
 # 在虚拟环境中依赖包
-pip install telethon
+pip install telethon 
 
 # 后台运行py文件
 nohup python3 main.py &
