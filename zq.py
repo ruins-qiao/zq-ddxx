@@ -20,10 +20,8 @@ async def zq_user(client, event):
         variable.initial_amount = int(variable.ys[my[1]][6])
         mes = f"""启动\n{variable.ys[my[1]]}"""
         message = await client.send_message(config.user, mes, parse_mode="markdown")
-        await asyncio.sleep(10)
-        m = event.message
-        await m.delete()
-        await message.delete()
+        asyncio.create_task(delete_later(client, event.chat_id, event.id, 10))
+        asyncio.create_task(delete_later(client, message.chat_id, message.id, 10))
         return
     if "res" == my[0]:
         # variable.history = []
@@ -32,10 +30,8 @@ async def zq_user(client, event):
         variable.earnings = 0
         mes = f"""重置成功"""
         message = await client.send_message(config.user, mes, parse_mode="markdown")
-        m = event.message
-        await asyncio.sleep(10)
-        await m.delete()
-        await message.delete()
+        asyncio.create_task(delete_later(client,event.chat_id,event.id,10))
+        asyncio.create_task(delete_later(client,message.chat_id,message.id,10))
         return
     if "set" == my[0]:
         variable.explode = int(my[1])
@@ -43,38 +39,31 @@ async def zq_user(client, event):
         variable.stop_count = int(my[2])
         mes = f"""设置成功"""
         message = await client.send_message(config.user, mes, parse_mode="markdown")
-        await asyncio.sleep(10)
-        m = event.message
-        await m.delete()
-        await message.delete()
+        asyncio.create_task(delete_later(client, event.chat_id, event.id, 10))
+        asyncio.create_task(delete_later(client, message.chat_id, message.id, 10))
         return
     if "ms" == my[0]:
         variable.mode = int(my[1])
         mes = f"""设置成功"""
         message = await client.send_message(config.user, mes, parse_mode="markdown")
-        await asyncio.sleep(10)
-        m = event.message
-        await m.delete()
-        await message.delete()
+        asyncio.create_task(delete_later(client, event.chat_id, event.id, 10))
+        asyncio.create_task(delete_later(client, message.chat_id, message.id, 10))
         return
     if "open" == my[0]:
         variable.open_ydx = True
-        message = event.message
-        await message.delete()
         await client.send_message(config.group, '/ydx')
+        asyncio.create_task(delete_later(client, event.chat_id, event.id, 10))
         return
     if "off" == my[0]:
         variable.open_ydx = False
-        message = event.message
-        await message.delete()
+        asyncio.create_task(delete_later(client, event.chat_id, event.id, 10))
         return
     if "xx" == my[0]:
         group = [-1002262543959, -1001833464786]
         for g in group:
             messages = [msg.id async for msg in client.iter_messages(g, from_user='me')]
             await client.delete_messages(g, messages)
-        message = event.message
-        await message.delete()
+        asyncio.create_task(delete_later(client, event.chat_id, event.id, 3))
         return
     if "top" == my[0]:
         # 获取本地文件
@@ -92,21 +81,17 @@ async def zq_user(client, event):
             amount1 = item['-amount']
             donation_list += f"     总榜Top {i}: {name} 大佬共赏赐小弟: {count} 次,共计: {format_number(int(amount))} 爱心\n     {config.name} 共赏赐 {name} 小弟： {count1} 次,共计： {format_number(int(amount1))} 爱心\n"
         donation_list += f"```"
-        ms = await client.send_message(config.user, donation_list)
-        await asyncio.sleep(60)
-        await event.message.delete()
-        await ms.delete()
+        message = await client.send_message(config.user, donation_list)
+        asyncio.create_task(delete_later(client, event.chat_id, event.id, 60))
+        asyncio.create_task(delete_later(client, message.chat_id, message.id, 60))
         return
     if "ys" == my[0]:
         ys = [int(my[2]), int(my[3]), float(my[4]), float(my[5]), float(my[6]), float(my[7]), int(my[8])]
         variable.ys[my[1]] = ys
         mes = """设置成功"""
         message = await client.send_message(config.user, mes, parse_mode="markdown")
-        m = event.message
-        await asyncio.sleep(10)
-        await m.delete()
-        await message.delete()
-        print("触发预设")
+        asyncio.create_task(delete_later(client, event.chat_id, event.id, 10))
+        asyncio.create_task(delete_later(client, message.chat_id, message.id, 10))
         return
     if "yss" == my[0]:
         if len(my) > 1:
@@ -114,26 +99,20 @@ async def zq_user(client, event):
                 del variable.ys[my[2]]
                 mes = """删除成功"""
                 message = await client.send_message(config.user, mes, parse_mode="markdown")
-                m = event.message
-                await asyncio.sleep(5)
-                await m.delete()
-                await message.delete()
+                asyncio.create_task(delete_later(client, event.chat_id, event.id, 10))
+                asyncio.create_task(delete_later(client, message.chat_id, message.id, 10))
         if len(variable.ys) > 0:
             max_key_length = max(len(str(k)) for k in variable.ys.keys())
             mes = "\n".join(
                 f"'{k.ljust(max_key_length)}': {v}" for k, v in variable.ys.items())
             message = await client.send_message(config.user, mes, parse_mode="markdown")
-            m = event.message
-            await asyncio.sleep(30)
-            await m.delete()
-            await message.delete()
+            asyncio.create_task(delete_later(client, event.chat_id, event.id, 60))
+            asyncio.create_task(delete_later(client, message.chat_id, message.id, 60))
         else:
             mes = """暂无预设"""
             message = await client.send_message(config.user, mes, parse_mode="markdown")
-            m = event.message
-            await asyncio.sleep(10)
-            await m.delete()
-            await message.delete()
+            asyncio.create_task(delete_later(client, event.chat_id, event.id, 10))
+            asyncio.create_task(delete_later(client, message.chat_id, message.id, 10))
         return
 
 
@@ -286,9 +265,8 @@ async def zq_settle(client, event):
                 variable.bet_on = False
                 variable.mode_stop = False
                 mes = f"""还剩 {variable.stop_count} 局恢复押注"""
-                m = await client.send_message('me', mes, parse_mode="markdown")
-                await asyncio.sleep(20)
-                await m.delete()
+                message = await client.send_message('me', mes, parse_mode="markdown")
+                asyncio.create_task(delete_later(client, message.chat_id, message.id, 30))
             else:
                 variable.explode_count = 0
                 variable.stop_count = variable.stop
@@ -296,9 +274,8 @@ async def zq_settle(client, event):
                 variable.win_count = 0
                 variable.lose_count = 0
                 mes = f"""恢复押注"""
-                m = await client.send_message('me', mes, parse_mode="markdown")
-                await asyncio.sleep(20)
-                await m.delete()
+                message = await client.send_message('me', mes, parse_mode="markdown")
+                asyncio.create_task(delete_later(client, message.chat_id, message.id, 30))
         if variable.message is not None:
             await variable.message.delete()
         # 获取统计结果
@@ -596,6 +573,11 @@ def mask_if_less(num1: int, num2: int, s) -> str:
 
     # 判断条件，如果 num1 小于 num2，返回等长的 '*'
     return '*' * len(s) if num1 < num2 else s
+
+async def delete_later(client,chat_id, msg_id, delay):
+    """在后台等待 `delay` 秒后删除消息"""
+    await asyncio.sleep(delay)
+    await client.delete_messages(chat_id, msg_id)
 
 
 # 初始数据结构
