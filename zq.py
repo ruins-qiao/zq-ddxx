@@ -30,8 +30,8 @@ async def zq_user(client, event):
         variable.earnings = 0
         mes = f"""重置成功"""
         message = await client.send_message(config.user, mes, parse_mode="markdown")
-        asyncio.create_task(delete_later(client,event.chat_id,event.id,10))
-        asyncio.create_task(delete_later(client,message.chat_id,message.id,10))
+        asyncio.create_task(delete_later(client, event.chat_id, event.id, 10))
+        asyncio.create_task(delete_later(client, message.chat_id, message.id, 10))
         return
     if "set" == my[0]:
         variable.explode = int(my[1])
@@ -118,15 +118,17 @@ async def zq_user(client, event):
 
 async def zq_bet_on(client, event):
     await asyncio.sleep(5)
-    if variable.bet_on or (variable.mode and variable.mode_stop):
+    if variable.bet_on or (variable.mode and variable.mode_stop) or (variable.mode == 2 and variable.mode_stop):
         # 判断是否是开盘信息
         if event.reply_markup:
             print(f"开始押注！")
             # 获取压大还是小
-            if variable.mode:
+            if variable.mode == 1:
                 check = predict_next_combined_trend(variable.history)
-            else:
+            elif variable.mode == 0 :
                 check = predict_next_trend(variable.history)
+            else:
+                check = chase_next_trend(variable.history)
             print(f"本次押注：{check}")
             # 获取押注金额 根据连胜局数和底价进行计算
             variable.bet_amount = calculate_bet_amount(variable.win_count, variable.lose_count,
@@ -160,17 +162,33 @@ def predict_next_combined_trend(history):
     """
     长短期趋势结合 获取押注大小
     """
-    if len(history) < 10:
+    if len(history) < 40:
         return random.choice([0, 1])
 
     short_term = sum(history[-3:])
     long_term = sum(history[-10:])
+    term = sum(history[-40:])
     if short_term >= 2 and long_term >= 6:
-        return 1
+        if term / 40 >= 0.55:
+            return 0
+        else:
+            return 1
     elif short_term <= 1 and long_term <= 4:
-        return 0
+        if term / 40 <= 0.45:
+            return 1
+        else:
+            return 0
     else:
         return random.choice([0, 1])
+
+def chase_next_trend(history):
+    """
+    追投
+    """
+    if len(history) < 1:
+        return random.choice([0, 1])
+
+    return 1 if history[-1] else 0
 
 
 def predict_next_trend(history):
@@ -313,8 +331,10 @@ async def zq_settle(client, event):
         )}\n\n———————————————\n🎯 **策略设定**\n💰 **初始金额**：{variable.initial_amount}\n"""
         if variable.mode == 0:
             mes += f"""🎰 **押注模式 反投**\n🔄 **{variable.continuous} 连反压**\n⏹ **押 {variable.lose_stop} 次停止**\n"""
-        else:
+        elif variable.mode == 1:
             mes += f"""🎰 **押注模式 预测**\n⏹ **押 {variable.lose_stop} 次停止**\n"""
+        else:
+            mes += f"""🎰 **押注模式 追投**\n⏹ **押 {variable.lose_stop} 次停止**\n"""
         mes += f"""💥 **炸 {variable.explode} 次暂停**\n🚫 **暂停 {variable.stop} 局**\n📉 **输 1 次：倍数 {variable.lose_once}**\n📉 **输 2 次：倍数 {variable.lose_twice}**\n📉 **输 3 次：倍数 {variable.lose_three}**\n📉 **输 4 次：倍数 {variable.lose_four}**"""
         variable.message = await client.send_message(config.user, mes, parse_mode="markdown")
         # 根据是否押注来统计 胜率和押注局数
@@ -574,7 +594,8 @@ def mask_if_less(num1: int, num2: int, s) -> str:
     # 判断条件，如果 num1 小于 num2，返回等长的 '*'
     return '*' * len(s) if num1 < num2 else s
 
-async def delete_later(client,chat_id, msg_id, delay):
+
+async def delete_later(client, chat_id, msg_id, delay):
     """在后台等待 `delay` 秒后删除消息"""
     await asyncio.sleep(delay)
     await client.delete_messages(chat_id, msg_id)
