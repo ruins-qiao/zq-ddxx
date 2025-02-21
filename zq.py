@@ -162,24 +162,32 @@ def predict_next_combined_trend(history):
     """
     长短期趋势结合 获取押注大小
     """
-    if len(history) < 40:
+    if len(history) < 10:
         return random.choice([0, 1])
 
     short_term = sum(history[-3:])
     long_term = sum(history[-10:])
-    term = sum(history[-40:])
-    if short_term >= 2 and long_term >= 6:
-        if term / 40 >= 0.55:
-            return 0
+    if len(history)<1000:
+        if short_term >= 2 and long_term >= 6:
+                return 1
+        elif short_term <= 1 and long_term <= 4:
+                return 0
         else:
-            return 1
-    elif short_term <= 1 and long_term <= 4:
-        if term / 40 <= 0.45:
-            return 1
-        else:
-            return 0
+            return random.choice([0, 1])
     else:
-        return random.choice([0, 1])
+        term = sum(history[-1000:])
+        if short_term >= 2 and long_term >= 6:
+            if term / 40 >= 0.55:
+                return 0
+            else:
+                return 1
+        elif short_term <= 1 and long_term <= 4:
+            if term / 40 <= 0.45:
+                return 1
+            else:
+                return 0
+        else:
+            return random.choice([0, 1])
 
 def chase_next_trend(history):
     """
