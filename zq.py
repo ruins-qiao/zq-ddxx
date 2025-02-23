@@ -35,8 +35,9 @@ async def zq_user(client, event):
         return
     if "set" == my[0]:
         variable.explode = int(my[1])
-        variable.stop = int(my[2])
-        variable.stop_count = int(my[2])
+        variable.profit = int(my[2])
+        variable.stop = int(my[3])
+        variable.stop_count = int(my[3])
         mes = f"""设置成功"""
         message = await client.send_message(config.user, mes, parse_mode="markdown")
         asyncio.create_task(delete_later(client, event.chat_id, event.id, 10))
@@ -125,7 +126,7 @@ async def zq_bet_on(client, event):
             # 获取压大还是小
             if variable.mode == 1:
                 check = predict_next_combined_trend(variable.history)
-            elif variable.mode == 0 :
+            elif variable.mode == 0:
                 check = predict_next_trend(variable.history)
             else:
                 check = chase_next_trend(variable.history)
@@ -167,27 +168,13 @@ def predict_next_combined_trend(history):
 
     short_term = sum(history[-3:])
     long_term = sum(history[-10:])
-    if len(history)<1000:
-        if short_term >= 2 and long_term >= 6:
-                return 1
-        elif short_term <= 1 and long_term <= 4:
-                return 0
-        else:
-            return random.choice([0, 1])
+    if short_term >= 2 and long_term >= 6:
+        return 1
+    elif short_term <= 1 and long_term <= 4:
+        return 0
     else:
-        term = sum(history[-1000:])
-        if short_term >= 2 and long_term >= 6:
-            if term / 40 >= 0.55:
-                return 0
-            else:
-                return 1
-        elif short_term <= 1 and long_term <= 4:
-            if term / 40 <= 0.45:
-                return 1
-            else:
-                return 0
-        else:
-            return random.choice([0, 1])
+        return random.choice([0, 1])
+
 
 def chase_next_trend(history):
     """
@@ -285,7 +272,8 @@ async def zq_settle(client, event):
             variable.history.append(1 if event.pattern_match.group(2) == variable.consequence else 0)
         # 统计连大连小次数
         whether_bet_on(variable.win_times, variable.lose_times)
-        if variable.explode_count >= variable.explode:
+
+        if variable.explode_count >= variable.explode or variable.period_profit >= variable.profit:
             if variable.stop_count > 1:
                 variable.stop_count -= 1
                 variable.bet_on = False
@@ -295,6 +283,7 @@ async def zq_settle(client, event):
                 asyncio.create_task(delete_later(client, message.chat_id, message.id, 30))
             else:
                 variable.explode_count = 0
+                variable.period_profit = 0
                 variable.stop_count = variable.stop
                 variable.mode_stop = True
                 variable.win_count = 0
@@ -338,11 +327,11 @@ async def zq_settle(client, event):
             for i in range(0, len(reversed_data), 10)
         )}\n\n———————————————\n🎯 **策略设定**\n💰 **初始金额**：{variable.initial_amount}\n"""
         if variable.mode == 0:
-            mes += f"""🎰 **押注模式 反投**\n🔄 **{variable.continuous} 连反压**\n⏹ **押 {variable.lose_stop} 次停止**\n"""
+            mes += f"""🎰 **押注模式 反投**\n🔄 **{variable.continuous} 连反压**\n⏹ **押 {variable.lose_stop} 次停止**\n📉 **赢 {variable.profit} 停止**\n📉 **本轮赢 {variable.period_profit} **\n"""
         elif variable.mode == 1:
-            mes += f"""🎰 **押注模式 预测**\n⏹ **押 {variable.lose_stop} 次停止**\n"""
+            mes += f"""🎰 **押注模式 预测**\n⏹ **押 {variable.lose_stop} 次停止**\n📉 **赢 {variable.profit} 停止**\n📉 **本轮赢 {variable.period_profit} **\n"""
         else:
-            mes += f"""🎰 **押注模式 追投**\n⏹ **押 {variable.lose_stop} 次停止**\n"""
+            mes += f"""🎰 **押注模式 追投**\n⏹ **押 {variable.lose_stop} 次停止**\n📉 **赢 {variable.profit} 停止**\n📉 **本轮赢 {variable.period_profit} **\n"""
         mes += f"""💥 **炸 {variable.explode} 次暂停**\n🚫 **暂停 {variable.stop} 局**\n📉 **输 1 次：倍数 {variable.lose_once}**\n📉 **输 2 次：倍数 {variable.lose_twice}**\n📉 **输 3 次：倍数 {variable.lose_three}**\n📉 **输 4 次：倍数 {variable.lose_four}**"""
         variable.message = await client.send_message(config.user, mes, parse_mode="markdown")
         # 根据是否押注来统计 胜率和押注局数
@@ -351,11 +340,13 @@ async def zq_settle(client, event):
                 if variable.bet_type == 1:
                     variable.win_total += 1
                     variable.earnings += (int(variable.bet_amount * 0.99))
+                    variable.period_profit += (int(variable.bet_amount * 0.99))
                     variable.win_count += 1
                     variable.lose_count = 0
                     status = 1
                 else:
                     variable.earnings -= variable.bet_amount
+                    variable.period_profit -= variable.bet_amount
                     variable.win_count = 0
                     variable.lose_count += 1
                     status = 0
@@ -363,11 +354,13 @@ async def zq_settle(client, event):
                 if variable.bet_type == 0:
                     variable.win_total += 1
                     variable.earnings += (int(variable.bet_amount * 0.99))
+                    variable.period_profit += (int(variable.bet_amount * 0.99))
                     variable.win_count += 1
                     variable.lose_count = 0
                     status = 1
                 else:
                     variable.earnings -= variable.bet_amount
+                    variable.period_profit -= variable.bet_amount
                     variable.win_count = 0
                     variable.lose_count += 1
                     status = 0

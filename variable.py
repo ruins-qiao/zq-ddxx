@@ -59,6 +59,12 @@ bet_amount = 0
 # 收益
 earnings = 0
 
+# 周期盈利
+period_profit = 0
+
+# 盈利限额
+profit = 300000
+
 # 记录连赢次数
 win_count = 0
 
