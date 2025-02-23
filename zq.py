@@ -373,22 +373,22 @@ async def zq_settle(client, event):
             for i in range(0, len(reversed_data), 10)
         )}\n\n———————————————\n🎯 **策略设定**\n"""
         if variable.mode == 0:
-            mes += f"""🎰 **押注模式 反投**\n"""
+            mes += f"""🎰 **押注模式 反投**\n🔄 **{variable.continuous} 连反压**\n"""
         elif variable.mode == 1:
             mes += f"""🎰 **押注模式 预测**\n"""
         else:
             mes += f"""🎰 **押注模式 追投**\n"""
-        mes += f"""💰 **初始金额**：{variable.initial_amount}\n🔄 **{variable.continuous} 连反压**\n"""
-        mes += f"""⏹ **押 {variable.lose_stop} 次停止**\n"""
-        mes += f"""💥 **炸 {variable.explode} 次暂停 {variable.stop} 局**\n"""
-        mes += f"""📈 **盈利限制 {variable.profit} / {variable.period_profit} 暂停 {variable.stop} 局**\n📉 **押注倍率 {variable.lose_once} / {variable.lose_twice} / {variable.lose_three} / {variable.lose_four}**\n\n"""
+        mes += f"""💰 **初始金额：{variable.initial_amount}**\n"""
+        mes += f"""⏹ **押注 {variable.lose_stop} 次停止**\n"""
+        mes += f"""💥 **炸 {variable.explode} 次 暂停 {variable.stop} 局**\n"""
+        mes += f"""📈 **盈利限制 {variable.profit} 暂停 {variable.stop} 局 **\n"""
+        mes += f"""📈 **本轮盈利 {variable.period_profit}\n📉 押注倍率 {variable.lose_once} / {variable.lose_twice} / {variable.lose_three} / {variable.lose_four} **\n\n"""
+        if variable.win_total >0:
+            mes += f"""🎯 **押注次数：{variable.total}\n🏆 胜率：{variable.win_total / variable.total * 100:.2f}%\n💰 收益：{variable.earnings} **"""
         if variable.bet:
-            if variable.message2 is not None:
-                await variable.message2.delete()
-            mess = f"""**🎯 押注次数：{variable.total}\n🏆 胜率：{variable.win_total / variable.total * 100:.2f}%\n💰 收益：{variable.earnings}**"""
-            variable.message2 = await client.send_message(config.user, mess, parse_mode="markdown")
             mess = f"""**📉 输赢统计： {"赢" if variable.status else "输"} {int(variable.bet_amount * 0.99) if variable.status else variable.bet_amount}\n🎲 结果： {event.pattern_match.group(2)}**"""
-            await client.send_message(config.user, mess, parse_mode="markdown")
+            m = await client.send_message(config.user, mess, parse_mode="markdown")
+            asyncio.create_task(delete_later(client, m.chat_id, m.id, 10))
         variable.message = await client.send_message(config.user, mes, parse_mode="markdown")
         # 根据是否押注来统计 胜率和押注局数
 
