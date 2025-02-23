@@ -378,10 +378,10 @@ async def zq_settle(client, event):
             mes += f"""🎰 **押注模式 预测**\n"""
         else:
             mes += f"""🎰 **押注模式 追投**\n"""
-        mes +=f"""💰 **初始金额**：{variable.initial_amount}\n"""
-        mes +=f"""⏹ **押 {variable.lose_stop} 次停止**\n"""
-        mes += f"""💥 **炸 {variable.explode} 次暂停**\n🚫 **暂停 {variable.stop} 局**\n📉 **押注倍率 {variable.lose_once} / {variable.lose_twice} / {variable.lose_three} / {variable.lose_four}**\n"""
-        mes += f"""📈 **盈利限制 {variable.profit} / {variable.period_profit} **\n\n"""
+        mes += f"""💰 **初始金额**：{variable.initial_amount}\n"""
+        mes += f"""⏹ **押 {variable.lose_stop} 次停止**\n"""
+        mes += f"""💥 **炸 {variable.explode} 次暂停 {variable.stop} 局**\n"""
+        mes += f"""📈 **盈利限制 {variable.profit} / {variable.period_profit} 暂停 {variable.stop} 局**\n📉 **押注倍率 {variable.lose_once} / {variable.lose_twice} / {variable.lose_three} / {variable.lose_four}**\n\n"""
         if variable.bet:
             if variable.message2 is not None:
                 await variable.message2.delete()
@@ -391,7 +391,6 @@ async def zq_settle(client, event):
             await client.send_message(config.user, mess, parse_mode="markdown")
         variable.message = await client.send_message(config.user, mes, parse_mode="markdown")
         # 根据是否押注来统计 胜率和押注局数
-
 
 
 async def qz_red_packet(client, event, functions):
