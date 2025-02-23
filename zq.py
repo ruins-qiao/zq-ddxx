@@ -273,6 +273,52 @@ async def zq_settle(client, event):
         # 统计连大连小次数
         whether_bet_on(variable.win_times, variable.lose_times)
 
+        if variable.bet:
+            if event.pattern_match.group(2) == variable.consequence:
+                if variable.bet_type == 1:
+                    variable.win_total += 1
+                    variable.earnings += (int(variable.bet_amount * 0.99))
+                    variable.period_profit += (int(variable.bet_amount * 0.99))
+                    variable.win_count += 1
+                    variable.lose_count = 0
+                    variable.status = 1
+                else:
+                    variable.earnings -= variable.bet_amount
+                    variable.period_profit -= variable.bet_amount
+                    variable.win_count = 0
+                    variable.lose_count += 1
+                    variable.status = 0
+            else:
+                if variable.bet_type == 0:
+                    variable.win_total += 1
+                    variable.earnings += (int(variable.bet_amount * 0.99))
+                    variable.period_profit += (int(variable.bet_amount * 0.99))
+                    variable.win_count += 1
+                    variable.lose_count = 0
+                    variable.status = 1
+                else:
+                    variable.earnings -= variable.bet_amount
+                    variable.period_profit -= variable.bet_amount
+                    variable.win_count = 0
+                    variable.lose_count += 1
+                    variable.status = 0
+
+            # if variable.message2 is not None:
+            #     await variable.message2.delete()
+            # 发送相关信息
+        #     mes = f"""
+        #             **🎯 押注次数：{variable.total}
+        # 🏆 胜率：{variable.win_total / variable.total * 100:.2f}%
+        # 💰 收益：{variable.earnings}**
+        #             """
+        #     variable.message2 = await client.send_message(config.user, mes, parse_mode="markdown")
+        #
+        #     mes = f"""
+        #             **📉 输赢统计： {"赢" if status else "输"} {int(variable.bet_amount * 0.99) if status else variable.bet_amount}
+        # 🎲 结果： {event.pattern_match.group(2)}**
+        #             """
+        #     await client.send_message(config.user, mes, parse_mode="markdown")
+
         if variable.explode_count >= variable.explode or variable.period_profit >= variable.profit:
             if variable.stop_count > 1:
                 variable.stop_count -= 1
@@ -325,60 +371,27 @@ async def zq_settle(client, event):
         📊 **近期 40 次结果**（由近及远）\n✅：大（1）  ❌：小（0）\n{os.linesep.join(
             " ".join(map(str, reversed_data[i:i + 10]))
             for i in range(0, len(reversed_data), 10)
-        )}\n\n———————————————\n🎯 **策略设定**\n💰 **初始金额**：{variable.initial_amount}\n"""
+        )}\n\n———————————————\n🎯 **策略设定**\n"""
         if variable.mode == 0:
-            mes += f"""🎰 **押注模式 反投**\n🔄 **{variable.continuous} 连反压**\n⏹ **押 {variable.lose_stop} 次停止**\n📉 **赢 {variable.profit} 停止**\n📉 **本轮赢 {variable.period_profit} **\n"""
+            mes += f"""🎰 **押注模式 反投**\n🔄 **{variable.continuous} 连反压**\n"""
         elif variable.mode == 1:
-            mes += f"""🎰 **押注模式 预测**\n⏹ **押 {variable.lose_stop} 次停止**\n📉 **赢 {variable.profit} 停止**\n📉 **本轮赢 {variable.period_profit} **\n"""
+            mes += f"""🎰 **押注模式 预测**\n"""
         else:
-            mes += f"""🎰 **押注模式 追投**\n⏹ **押 {variable.lose_stop} 次停止**\n📉 **赢 {variable.profit} 停止**\n📉 **本轮赢 {variable.period_profit} **\n"""
-        mes += f"""💥 **炸 {variable.explode} 次暂停**\n🚫 **暂停 {variable.stop} 局**\n📉 **输 1 次：倍数 {variable.lose_once}**\n📉 **输 2 次：倍数 {variable.lose_twice}**\n📉 **输 3 次：倍数 {variable.lose_three}**\n📉 **输 4 次：倍数 {variable.lose_four}**"""
-        variable.message = await client.send_message(config.user, mes, parse_mode="markdown")
-        # 根据是否押注来统计 胜率和押注局数
+            mes += f"""🎰 **押注模式 追投**\n"""
+        mes +=f"""💰 **初始金额**：{variable.initial_amount}\n"""
+        mes +=f"""⏹ **押 {variable.lose_stop} 次停止**\n"""
+        mes += f"""💥 **炸 {variable.explode} 次暂停**\n🚫 **暂停 {variable.stop} 局**\n📉 **押注倍率 {variable.lose_once} / {variable.lose_twice} / {variable.lose_three} / {variable.lose_four}**\n"""
+        mes += f"""📈 **盈利限制 {variable.profit} / {variable.period_profit} **\n\n"""
         if variable.bet:
-            if event.pattern_match.group(2) == variable.consequence:
-                if variable.bet_type == 1:
-                    variable.win_total += 1
-                    variable.earnings += (int(variable.bet_amount * 0.99))
-                    variable.period_profit += (int(variable.bet_amount * 0.99))
-                    variable.win_count += 1
-                    variable.lose_count = 0
-                    status = 1
-                else:
-                    variable.earnings -= variable.bet_amount
-                    variable.period_profit -= variable.bet_amount
-                    variable.win_count = 0
-                    variable.lose_count += 1
-                    status = 0
-            else:
-                if variable.bet_type == 0:
-                    variable.win_total += 1
-                    variable.earnings += (int(variable.bet_amount * 0.99))
-                    variable.period_profit += (int(variable.bet_amount * 0.99))
-                    variable.win_count += 1
-                    variable.lose_count = 0
-                    status = 1
-                else:
-                    variable.earnings -= variable.bet_amount
-                    variable.period_profit -= variable.bet_amount
-                    variable.win_count = 0
-                    variable.lose_count += 1
-                    status = 0
             if variable.message2 is not None:
                 await variable.message2.delete()
-            # 发送相关信息
-            mes = f"""
-            **🎯 押注次数：{variable.total}
-🏆 胜率：{variable.win_total / variable.total * 100:.2f}%
-💰 收益：{variable.earnings}**
-            """
-            variable.message2 = await client.send_message(config.user, mes, parse_mode="markdown")
+            mess = f"""**🎯 押注次数：{variable.total}\n🏆 胜率：{variable.win_total / variable.total * 100:.2f}%\n💰 收益：{variable.earnings}**"""
+            variable.message2 = await client.send_message(config.user, mess, parse_mode="markdown")
+            mess = f"""**📉 输赢统计： {"赢" if variable.status else "输"} {int(variable.bet_amount * 0.99) if variable.status else variable.bet_amount}\n🎲 结果： {event.pattern_match.group(2)}**"""
+            await client.send_message(config.user, mess, parse_mode="markdown")
+        variable.message = await client.send_message(config.user, mes, parse_mode="markdown")
+        # 根据是否押注来统计 胜率和押注局数
 
-            mes = f"""
-            **📉 输赢统计： {"赢" if status else "输"} {int(variable.bet_amount * 0.99) if status else variable.bet_amount}
-🎲 结果： {event.pattern_match.group(2)}**
-            """
-            await client.send_message(config.user, mes, parse_mode="markdown")
 
 
 async def qz_red_packet(client, event, functions):

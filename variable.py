@@ -12,6 +12,8 @@ history = []
 # 押注模式  0 = 反投 1 = 预测
 mode= 0
 
+# 输赢变量
+status = 0
 
 # 是否押注
 bet = False
