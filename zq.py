@@ -373,12 +373,12 @@ async def zq_settle(client, event):
             for i in range(0, len(reversed_data), 10)
         )}\n\n———————————————\n🎯 **策略设定**\n"""
         if variable.mode == 0:
-            mes += f"""🎰 **押注模式 反投**\n🔄 **{variable.continuous} 连反压**\n"""
+            mes += f"""🎰 **押注模式 反投**\n"""
         elif variable.mode == 1:
             mes += f"""🎰 **押注模式 预测**\n"""
         else:
             mes += f"""🎰 **押注模式 追投**\n"""
-        mes += f"""💰 **初始金额**：{variable.initial_amount}\n"""
+        mes += f"""💰 **初始金额**：{variable.initial_amount}\n🔄 **{variable.continuous} 连反压**\n"""
         mes += f"""⏹ **押 {variable.lose_stop} 次停止**\n"""
         mes += f"""💥 **炸 {variable.explode} 次暂停 {variable.stop} 局**\n"""
         mes += f"""📈 **盈利限制 {variable.profit} / {variable.period_profit} 暂停 {variable.stop} 局**\n📉 **押注倍率 {variable.lose_once} / {variable.lose_twice} / {variable.lose_three} / {variable.lose_four}**\n\n"""
