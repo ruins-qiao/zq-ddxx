@@ -386,7 +386,7 @@ async def zq_settle(client, event):
         mes += f"""💰 **初始金额：{variable.initial_amount}**\n"""
         mes += f"""⏹ **押注 {variable.lose_stop} 次停止**\n"""
         mes += f"""💥 **炸 {variable.explode} 次 暂停 {variable.stop} 局**\n"""
-        mes += f"""📈 **盈利限制 {variable.profit} 暂停 {variable.stop} 局 **\n"""
+        mes += f"""📈 **盈利限制 {variable.profit} 暂停 {variable.profit_stop} 局 **\n"""
         mes += f"""📈 **本轮盈利 {variable.period_profit}\n📉 押注倍率 {variable.lose_once} / {variable.lose_twice} / {variable.lose_three} / {variable.lose_four} **\n\n"""
         if variable.win_total >0:
             mes += f"""🎯 **押注次数：{variable.total}\n🏆 胜率：{variable.win_total / variable.total * 100:.2f}%\n💰 收益：{variable.earnings} **"""
