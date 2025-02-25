@@ -36,6 +36,8 @@ explode_count = 0
 stop_count = 0
 # 连续标记
 mark = True
+# 连续标记
+flag = True
 # 暂停开关
 mode_stop = True
 

@@ -147,11 +147,15 @@ async def zq_bet_on(client, event):
                     **⚡ 押注： {"押大" if check else "押小"}
 💵 金额： {variable.bet_amount}**
                     """
-                await client.send_message(config.user, mes, parse_mode="markdown")
+                m = await client.send_message(config.user, mes, parse_mode="markdown")
+                asyncio.create_task(delete_later(client, m.chat_id, m.id, 30))
                 variable.mark = True
             else:
                 if variable.mark:
                     variable.explode_count += 1
+                    if variable.explode_count >=variable.explode:
+                        mes = f"""**⚡ 本轮炸了一共损失：{calculate_losses(variable.lose_stop,variable.initial_amount,variable.lose_once,variable.lose_twice,variable.lose_three,variable.lose_four)} **"""
+                        await client.send_message(config.user, mes, parse_mode="markdown")
                     print("触发停止押注")
                     variable.mark = False
                 variable.bet = False
@@ -175,6 +179,29 @@ def predict_next_combined_trend(history):
     else:
         return random.choice([0, 1])
 
+def calculate_losses(cycles, initial, rate1, rate2, rate3, rate4):
+    total = 0
+    current_bet = initial
+    for i in range(cycles):
+        # 累加当前押注金额
+        total += current_bet
+
+        # 确定当前阶段倍数
+        if i < 3:
+            rate = [rate1, rate2, rate3][i]
+        else:
+            rate = rate4
+
+        # 计算基础押注金额
+        base_bet = current_bet * rate
+
+        # 计算并处理额外金额（下次金额的1%取500整倍数）
+        additional = closest_multiple_of_500((base_bet * 0.01))
+
+        # 更新押注金额（基础金额 + 处理后的额外金额）
+        current_bet = base_bet + additional
+
+    return total
 
 def chase_next_trend(history):
     """
@@ -320,23 +347,26 @@ async def zq_settle(client, event):
         #     await client.send_message(config.user, mes, parse_mode="markdown")
 
         if variable.explode_count >= variable.explode or variable.period_profit >= variable.profit:
-            if variable.explode_count >= variable.explode:
-                variable.stop_count = variable.stop
-            elif variable.period_profit >= variable.profit:
-                variable.stop_count = variable.profit_stop
-            else:
-                variable.stop_count = variable.stop
+            if variable.flag :
+                variable.flag = False
+                if variable.explode_count >= variable.explode:
+                    variable.stop_count = variable.stop
+                elif variable.period_profit >= variable.profit:
+                    variable.stop_count = variable.profit_stop
+                else:
+                    variable.stop_count = variable.stop
             if variable.stop_count > 1:
                 variable.stop_count -= 1
                 variable.bet_on = False
                 variable.mode_stop = False
-                mes = f"""还剩 {variable.stop_count} 局恢复押注"""
-                message = await client.send_message('me', mes, parse_mode="markdown")
-                asyncio.create_task(delete_later(client, message.chat_id, message.id, 30))
+                # mes = f"""还剩 {variable.stop_count} 局恢复押注"""
+                # message = await client.send_message('me', mes, parse_mode="markdown")
+                # asyncio.create_task(delete_later(client, message.chat_id, message.id, 30))
             else:
                 variable.explode_count = 0
                 variable.period_profit = 0
                 variable.mode_stop = True
+                variable.flag = True
                 variable.win_count = 0
                 variable.lose_count = 0
                 mes = f"""恢复押注"""
@@ -390,10 +420,12 @@ async def zq_settle(client, event):
         mes += f"""📈 **本轮盈利 {variable.period_profit}\n📉 押注倍率 {variable.lose_once} / {variable.lose_twice} / {variable.lose_three} / {variable.lose_four} **\n\n"""
         if variable.win_total >0:
             mes += f"""🎯 **押注次数：{variable.total}\n🏆 胜率：{variable.win_total / variable.total * 100:.2f}%\n💰 收益：{variable.earnings} **"""
+        if variable.stop_count > 1:
+            mes += f"""\n\n还剩 {variable.stop_count} 局恢复押注"""
         if variable.bet:
             mess = f"""**📉 输赢统计： {"赢" if variable.status else "输"} {int(variable.bet_amount * 0.99) if variable.status else variable.bet_amount}\n🎲 结果： {event.pattern_match.group(2)}**"""
             m = await client.send_message(config.user, mess, parse_mode="markdown")
-            asyncio.create_task(delete_later(client, m.chat_id, m.id, 10))
+            asyncio.create_task(delete_later(client, m.chat_id, m.id, 30))
         variable.message = await client.send_message(config.user, mes, parse_mode="markdown")
         # 根据是否押注来统计 胜率和押注局数
 
