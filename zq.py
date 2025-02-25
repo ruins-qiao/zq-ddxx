@@ -37,7 +37,7 @@ async def zq_user(client, event):
         variable.explode = int(my[1])
         variable.profit = int(my[2])
         variable.stop = int(my[3])
-        variable.stop_count = int(my[3])
+        variable.profit_stop = int(my[4])
         mes = f"""设置成功"""
         message = await client.send_message(config.user, mes, parse_mode="markdown")
         asyncio.create_task(delete_later(client, event.chat_id, event.id, 10))
@@ -320,6 +320,12 @@ async def zq_settle(client, event):
         #     await client.send_message(config.user, mes, parse_mode="markdown")
 
         if variable.explode_count >= variable.explode or variable.period_profit >= variable.profit:
+            if variable.explode_count >= variable.explode:
+                variable.stop_count = variable.stop
+            elif variable.period_profit >= variable.profit:
+                variable.stop_count = variable.profit_stop
+            else:
+                variable.stop_count = variable.stop
             if variable.stop_count > 1:
                 variable.stop_count -= 1
                 variable.bet_on = False
@@ -330,7 +336,6 @@ async def zq_settle(client, event):
             else:
                 variable.explode_count = 0
                 variable.period_profit = 0
-                variable.stop_count = variable.stop
                 variable.mode_stop = True
                 variable.win_count = 0
                 variable.lose_count = 0
