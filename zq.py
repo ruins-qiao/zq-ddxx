@@ -156,6 +156,9 @@ async def zq_bet_on(client, event):
                     print("触发停止押注")
                     variable.mark = False
                 variable.bet = False
+                if variable.mode == 1 or variable.mode == 2:
+                    variable.win_count = 0
+                    variable.lose_count = 0
     else:
         variable.bet = False
 
@@ -175,6 +178,7 @@ def predict_next_combined_trend(history):
         return 0
     else:
         return random.choice([0, 1])
+
 
 def calculate_losses(cycles, initial, rate1, rate2, rate3, rate4):
     total = 0
@@ -199,6 +203,7 @@ def calculate_losses(cycles, initial, rate1, rate2, rate3, rate4):
         current_bet = base_bet + additional
 
     return total
+
 
 def chase_next_trend(history):
     """
@@ -344,10 +349,10 @@ async def zq_settle(client, event):
         #     await client.send_message(config.user, mes, parse_mode="markdown")
 
         if variable.explode_count >= variable.explode or variable.period_profit >= variable.profit:
-            if variable.flag :
+            if variable.flag:
                 variable.flag = False
                 if variable.explode_count >= variable.explode:
-                    mes = f"""**💥 本轮炸了一共损失：{int(calculate_losses(variable.lose_stop, variable.initial_amount, variable.lose_once, variable.lose_twice, variable.lose_three, variable.lose_four)*variable.explode)} 灵石**"""
+                    mes = f"""**💥 本轮炸了一共损失：{int(calculate_losses(variable.lose_stop, variable.initial_amount, variable.lose_once, variable.lose_twice, variable.lose_three, variable.lose_four) * variable.explode)} 灵石**"""
                     await client.send_message(config.user, mes, parse_mode="markdown")
                     variable.stop_count = variable.stop
                 elif variable.period_profit >= variable.profit:
@@ -419,9 +424,9 @@ async def zq_settle(client, event):
         mes += f"""💥 **炸 {variable.explode} 次 暂停 {variable.stop} 局**\n"""
         mes += f"""📈 **盈利限制 {variable.profit} 暂停 {variable.profit_stop} 局 **\n"""
         mes += f"""📈 **本轮盈利 {variable.period_profit}\n📉 押注倍率 {variable.lose_once} / {variable.lose_twice} / {variable.lose_three} / {variable.lose_four} **\n\n"""
-        if variable.win_total >0:
+        if variable.win_total > 0:
             mes += f"""🎯 **押注次数：{variable.total}\n🏆 胜率：{variable.win_total / variable.total * 100:.2f}%\n💰 收益：{variable.earnings} **"""
-        if variable.stop_count > 1:
+        if variable.stop_count >= 1:
             mes += f"""\n\n还剩 {variable.stop_count} 局恢复押注"""
         if variable.bet:
             mess = f"""**📉 输赢统计： {"赢" if variable.status else "输"} {int(variable.bet_amount * 0.99) if variable.status else variable.bet_amount}\n🎲 结果： {event.pattern_match.group(2)}**"""
