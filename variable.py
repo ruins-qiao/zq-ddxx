@@ -25,11 +25,11 @@ bet_on = False
 continuous = 30
 
 # 炸几次停止
-explode = 1
+explode = 3
 # 炸停止多久 单位为局
 stop = 100
 # 盈利停止多久 单位为局
-profit_stop = 25
+profit_stop = 50
 # 记录炸几次
 explode_count = 0
 # 记录停止次数
@@ -69,7 +69,7 @@ earnings = 0
 period_profit = 0
 
 # 盈利限额
-profit = 1000000
+profit = 10000000
 
 # 记录连赢次数
 win_count = 0
