@@ -38,6 +38,8 @@ async def zq_user(client, event):
         variable.profit = int(my[2])
         variable.stop = int(my[3])
         variable.profit_stop = int(my[4])
+        if len(my) > 5:
+            variable.stop_count = int(my[5])
         mes = f"""设置成功"""
         message = await client.send_message(config.user, mes, parse_mode="markdown")
         asyncio.create_task(delete_later(client, event.chat_id, event.id, 10))
@@ -426,7 +428,7 @@ async def zq_settle(client, event):
         mes += f"""📈 **本轮盈利 {variable.period_profit}\n📉 押注倍率 {variable.lose_once} / {variable.lose_twice} / {variable.lose_three} / {variable.lose_four} **\n\n"""
         if variable.win_total > 0:
             mes += f"""🎯 **押注次数：{variable.total}\n🏆 胜率：{variable.win_total / variable.total * 100:.2f}%\n💰 收益：{variable.earnings} **"""
-        if variable.stop_count >= 1:
+        if variable.stop_count > 1:
             mes += f"""\n\n还剩 {variable.stop_count} 局恢复押注"""
         if variable.bet:
             mess = f"""**📉 输赢统计： {"赢" if variable.status else "输"} {int(variable.bet_amount * 0.99) if variable.status else variable.bet_amount}\n🎲 结果： {event.pattern_match.group(2)}**"""
