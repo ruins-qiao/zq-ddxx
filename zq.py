@@ -10,6 +10,26 @@ import random
 
 async def zq_user(client, event):
     my = event.raw_text.split(" ")
+    # Help 命令
+    if "h" == my[0]:
+        help_message = """```
+📋 **命令列表**
+- `st <预设>`: 启动预设参数 
+- `res`: 重置统计数据
+- `set <explode> <profit> <stop> <profit_stop> [stop_count]`: 设置押注参数 (例: `set 3 10000 5 10 2`)
+- `ms <模式>`: 设置模式 (0:反投, 1:预测, 2:追投, 例: `ms 1`)
+- `open`: 开启自动押注
+- `off`: 关闭自动押注
+- `xx`: 删除群组消息
+- `top`: 显示捐赠榜 Top 20
+- `ys : 设置预设 (例: `ys p1 3 5 2.0 3.0 4.0 5.0 1000`)
+- `yss [dl <名称>]`: 查看/删除预设 (例: `yss` 或 `yss dl p1`)
+- `help`: 显示此帮助
+    ```"""
+        message = await client.send_message(config.user, help_message, parse_mode="markdown")
+        asyncio.create_task(delete_later(client, event.chat_id, event.id, 60))
+        asyncio.create_task(delete_later(client, message.chat_id, message.id, 60))
+        return
     if "st" == my[0]:
         variable.continuous = int(variable.ys[my[1]][0])
         variable.lose_stop = int(variable.ys[my[1]][1])
