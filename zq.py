@@ -354,7 +354,8 @@ async def zq_settle(client, event):
             if variable.flag:
                 variable.flag = False
                 if variable.explode_count >= variable.explode:
-                    mes = f"""**💥 本轮炸了一共损失：{int(calculate_losses(variable.lose_stop, variable.initial_amount, variable.lose_once, variable.lose_twice, variable.lose_three, variable.lose_four) * variable.explode)} 灵石**"""
+                    # mes = f"""**💥 本轮炸了一共押注：{int(calculate_losses(variable.lose_stop, variable.initial_amount, variable.lose_once, variable.lose_twice, variable.lose_three, variable.lose_four) * variable.explode)} 灵石**\n"""
+                    mes = f"""**💥 本轮炸了收益如下：{variable.period_profit} 灵石**\n"""
                     await client.send_message(config.user, mes, parse_mode="markdown")
                     variable.stop_count = variable.stop
                 elif variable.period_profit >= variable.profit:
