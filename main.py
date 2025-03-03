@@ -4,6 +4,8 @@ import zq
 
 # 2. 创建 Telegram 客户端
 client = TelegramClient(config.user_session, config.api_id, config.api_hash)
+# 程序启动时 创建数据库
+zq.create_table_if_not_exists()
 
 
 @client.on(
@@ -36,7 +38,6 @@ async def zq_user_handler(event):
     events.NewMessage(chats=config.zq_group, pattern=r"转账成功.*", from_users=config.zq_bot))
 async def zq_shoot_handler(event):
     await zq.zq_shoot(client, event)
-
 
 
 # 启动客户端

@@ -40,6 +40,10 @@ mark = True
 flag = True
 # 暂停开关
 mode_stop = True
+# 预测短期暂停开关
+forecast_stop = True
+# 预测短期暂停次数
+forecast_count = 0
 
 # 存放历史消息
 message = None
@@ -58,6 +62,9 @@ win_total = 0
 
 # 初始金额
 initial_amount = 10000
+
+# 余额
+balance = 300000
 
 # 记录押注金额
 bet_amount = 0
