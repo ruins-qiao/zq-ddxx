@@ -617,8 +617,8 @@ async def zq_shoot(client, event):
                 # 查询用户数据
                 user = query_users(event.sender_id, user_id)
                 if user is not None:
-                    update_user(event.sender_id, user_id, name=user_name, neg_amount=user["amount"] + int(amount),
-                                neg_count=user["count"] + 1)
+                    update_user(event.sender_id, user_id, name=user_name, amount=user["amount"] + int(amount),
+                                count=user["count"] + 1)
                     await client.send_message(config.user, f"{user_name} 向您转账 {amount} 爱心", parse_mode="markdown")
                 else:
                     add_user(event.sender_id, user_id, name=user_name, amount=int(amount), count=1, neg_amount=0,
