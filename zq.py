@@ -164,19 +164,22 @@ async def zq_bet_on(client, event):
                                                                          variable.lose_three,
                                                                          variable.lose_four)) >= 0:
         if variable.bet_on or (
-                variable.mode and variable.mode_stop and variable.forecast_stop) or (
-                variable.mode == 2 and variable.mode_stop and variable.forecast_stop):
+                # variable.mode and variable.mode_stop and variable.forecast_stop) or (
+                # variable.mode == 2 and variable.mode_stop and variable.forecast_stop):
+                variable.mode and variable.mode_stop) or (
+                variable.mode == 2 and variable.mode_stop):
             # 判断是否是开盘信息
             if event.reply_markup:
                 print(f"开始押注！")
                 # 获取压大还是小
                 if variable.mode == 1:
-                    check = predict_next_combined_trend(variable.history)
+                    check = predict_next_bet(variable.i)
                 elif variable.mode == 0:
                     check = predict_next_trend(variable.history)
                 else:
                     check = chase_next_trend(variable.history)
                 print(f"本次押注：{check}")
+                variable.i += 1
                 # 获取押注金额 根据连胜局数和底价进行计算
                 variable.bet_amount = calculate_bet_amount(variable.win_count, variable.lose_count,
                                                            variable.initial_amount,
@@ -207,18 +210,19 @@ async def zq_bet_on(client, event):
                         variable.lose_count = 0
         else:
             variable.bet = False
-            if not variable.forecast_stop:
-                m = await client.send_message(config.user, f"连输短暂暂停还剩 {variable.forecast_count} 局")
-                asyncio.create_task(delete_later(client, m.chat_id, m.id, 60))
-                variable.forecast_count -= 1
-                if variable.forecast_count == 0:
-                    variable.forecast_stop = True
+            # if not variable.forecast_stop:
+            #     m = await client.send_message(config.user, f"连输短暂暂停还剩 {variable.forecast_count} 局")
+            #     asyncio.create_task(delete_later(client, m.chat_id, m.id, 60))
+            #     variable.forecast_count -= 1
+            #     if variable.forecast_count == 0:
+            #         variable.forecast_stop = True
     else:
         variable.bet = False
         variable.win_count = 0
         variable.lose_count = 0
         m = await client.send_message(config.user, f"**没有足够资金进行押注 请重置余额**")
         asyncio.create_task(delete_later(client, m.chat_id, m.id, 60))
+
 
 def predict_next_combined_trend(history):
     """
@@ -235,6 +239,15 @@ def predict_next_combined_trend(history):
         return 0
     else:
         return random.choice([0, 1])
+
+
+def predict_next_bet(current_round):
+    if len(variable.current_pattern) <= 0 or (current_round % 5 == 0):
+        variable.current_pattern = [random.randint(0, 1) for _ in range(3)]
+
+    # 计算下一局在当前序列中的位置
+    pattern_index = (current_round + 1) % 3
+    return variable.current_pattern[pattern_index]
 
 
 def calculate_losses(cycles, initial, rate1, rate2, rate3, rate4):

@@ -44,6 +44,10 @@ mode_stop = True
 forecast_stop = True
 # 预测短期暂停次数
 forecast_count = 0
+# 序列
+current_pattern = []
+
+i = 1
 
 # 存放历史消息
 message = None
