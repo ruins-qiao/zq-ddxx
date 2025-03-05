@@ -627,8 +627,8 @@ async def zq_shoot(client, event):
 
                 all_users = query_users(event.sender_id, order="DESC")
                 # 找到当前用户在排序中的位置
-                index = next((i for i, item in enumerate(all_users) if item["user_id"] == user["user_id"]), -1)
                 user = query_users(event.sender_id, user_id)
+                index = next((i for i, item in enumerate(all_users) if item["user_id"] == user["user_id"]), -1)
                 # 生成捐赠榜文本
                 donation_list = f"```感谢 {user_name} 大佬赏赐的: {format_number(int(amount))} 爱心\n"
                 donation_list += f"大佬您共赏赐了小弟: {user["count"]} 次,共计: {format_number(user["amount"])} 爱心\n"
