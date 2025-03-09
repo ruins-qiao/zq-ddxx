@@ -357,7 +357,7 @@ async def zq_settle(client, event):
         print(f"{event.pattern_match.group(1)}")
         print(f"{event.pattern_match.group(2)}")
         if variable.open_ydx:
-            await client.send_message(config.group, '/ydx')
+            await client.send_message(-1002262543959, '/ydx')
         # 存储历史记录
         if len(variable.history) >= 1000:
             del variable.history[:5]
