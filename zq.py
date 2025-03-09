@@ -73,7 +73,7 @@ async def zq_user(client, event):
         return
     if "open" == my[0]:
         variable.open_ydx = True
-        await client.send_message(config.group, '/ydx')
+        await client.send_message(-1002262543959, '/ydx')
         asyncio.create_task(delete_later(client, event.chat_id, event.id, 10))
         return
     if "off" == my[0]:
