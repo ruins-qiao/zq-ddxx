@@ -29,7 +29,7 @@ async def zq_settle_handler(event):
 
 
 @client.on(
-    events.NewMessage(chats=config.user))
+    events.NewMessage(chats=config.group))
 async def zq_user_handler(event):
     await zq.zq_user(client, event)
 

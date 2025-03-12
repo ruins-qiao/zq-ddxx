@@ -18,14 +18,12 @@ async def zq_user(client, event):
 - res - 重置统计数据 (res)\n
 - set - 设置参数：被炸几次触发、赢利多少触发、炸停止多久、盈利停止多久、手动恢复对局设置为“1” (set 5 1000000 3 5 1)\n
 - ms - 切换模式：0反投,1预测,2追投 (ms 1)\n
-- open - 开启自动操作 (open)\n
-- off - 关闭自动操作 (off)\n
 - xx - 删除群组消息 (xx)\n
 - top - 显示捐赠排行榜 (top)\n
 - ys - 保存预设策略 (ys yc 30 3 3.0 3.0 3.0 3.0 10000)\n
 - yss - 查看或删除预设 (yss 或 yss dl yc)\n
 - h - 查看帮助 (help)```"""
-        message = await client.send_message(config.user, help_message, parse_mode="markdown")
+        message = await client.send_message(config.group, help_message, parse_mode="markdown")
         asyncio.create_task(delete_later(client, event.chat_id, event.id, 60))
         asyncio.create_task(delete_later(client, message.chat_id, message.id, 60))
         return
@@ -39,7 +37,7 @@ async def zq_user(client, event):
         variable.lose_four = yss["field6"]
         variable.initial_amount = yss["amount"]
         mes = f"""启动 {yss["type"]}"""
-        message = await client.send_message(config.user, mes, parse_mode="markdown")
+        message = await client.send_message(config.group, mes, parse_mode="markdown")
         asyncio.create_task(delete_later(client, event.chat_id, event.id, 10))
         asyncio.create_task(delete_later(client, message.chat_id, message.id, 10))
         return
@@ -48,7 +46,7 @@ async def zq_user(client, event):
         variable.total = 0
         variable.earnings = 0
         mes = f"""重置成功"""
-        message = await client.send_message(config.user, mes, parse_mode="markdown")
+        message = await client.send_message(config.group, mes, parse_mode="markdown")
         asyncio.create_task(delete_later(client, event.chat_id, event.id, 10))
         asyncio.create_task(delete_later(client, message.chat_id, message.id, 10))
         return
@@ -60,25 +58,16 @@ async def zq_user(client, event):
         if len(my) > 5:
             variable.stop_count = int(my[5])
         mes = f"""设置成功"""
-        message = await client.send_message(config.user, mes, parse_mode="markdown")
+        message = await client.send_message(config.group, mes, parse_mode="markdown")
         asyncio.create_task(delete_later(client, event.chat_id, event.id, 10))
         asyncio.create_task(delete_later(client, message.chat_id, message.id, 10))
         return
     if "ms" == my[0]:
         variable.mode = int(my[1])
         mes = f"""设置成功"""
-        message = await client.send_message(config.user, mes, parse_mode="markdown")
+        message = await client.send_message(config.group, mes, parse_mode="markdown")
         asyncio.create_task(delete_later(client, event.chat_id, event.id, 10))
         asyncio.create_task(delete_later(client, message.chat_id, message.id, 10))
-        return
-    if "open" == my[0]:
-        variable.open_ydx = True
-        await client.send_message(-1002262543959, '/ydx')
-        asyncio.create_task(delete_later(client, event.chat_id, event.id, 10))
-        return
-    if "off" == my[0]:
-        variable.open_ydx = False
-        asyncio.create_task(delete_later(client, event.chat_id, event.id, 10))
         return
     if "xx" == my[0]:
         group = [-1002262543959, -1001833464786]
@@ -90,7 +79,7 @@ async def zq_user(client, event):
     if "ye" == my[0]:
         variable.balance = int(my[1])
         mes = f"""设置成功"""
-        message = await client.send_message(config.user, mes, parse_mode="markdown")
+        message = await client.send_message(config.group, mes, parse_mode="markdown")
         asyncio.create_task(delete_later(client, event.chat_id, event.id, 10))
         asyncio.create_task(delete_later(client, message.chat_id, message.id, 10))
     if "top" == my[0]:
@@ -108,12 +97,12 @@ async def zq_user(client, event):
                 amount1 = item['neg_amount']
                 donation_list += f"     总榜Top {i}: {name} 大佬共赏赐小弟: {count} 次,共计: {format_number(int(amount))} 爱心\n{config.name} 共赏赐 {name} 小弟： {count1} 次,共计： {format_number(int(amount1))} 爱心\n"
             donation_list += f"```"
-            message = await client.send_message(config.user, donation_list)
+            message = await client.send_message(config.group, donation_list)
             asyncio.create_task(delete_later(client, event.chat_id, event.id, 60))
             asyncio.create_task(delete_later(client, message.chat_id, message.id, 60))
             return
         else:
-            message = await client.send_message(config.user, f"**暂无记录**")
+            message = await client.send_message(config.group, f"**暂无记录**")
             asyncio.create_task(delete_later(client, event.chat_id, event.id, 10))
             asyncio.create_task(delete_later(client, message.chat_id, message.id, 10))
     if "ys" == my[0]:
@@ -124,7 +113,7 @@ async def zq_user(client, event):
         else:
             mes = add_record(my[1], int(my[2]), int(my[3]), float(my[4]), float(my[5]), float(my[6]), float(my[7]),
                              int(my[8]))
-        message = await client.send_message(config.user, mes, parse_mode="markdown")
+        message = await client.send_message(config.group, mes, parse_mode="markdown")
         asyncio.create_task(delete_later(client, event.chat_id, event.id, 10))
         asyncio.create_task(delete_later(client, message.chat_id, message.id, 10))
         return
@@ -132,7 +121,7 @@ async def zq_user(client, event):
         if len(my) > 1:
             if "dl" == my[1]:
                 mes = delete_record(my[2])
-                message = await client.send_message(config.user, mes, parse_mode="markdown")
+                message = await client.send_message(config.group, mes, parse_mode="markdown")
                 asyncio.create_task(delete_later(client, event.chat_id, event.id, 10))
                 asyncio.create_task(delete_later(client, message.chat_id, message.id, 10))
                 return
@@ -144,12 +133,12 @@ async def zq_user(client, event):
                 for ys in yss
             )
             mes += "```"
-            message = await client.send_message(config.user, mes, parse_mode="markdown")
+            message = await client.send_message(config.group, mes, parse_mode="markdown")
             asyncio.create_task(delete_later(client, event.chat_id, event.id, 60))
             asyncio.create_task(delete_later(client, message.chat_id, message.id, 60))
         else:
             mes = """**暂无预设记录**"""
-            message = await client.send_message(config.user, mes, parse_mode="markdown")
+            message = await client.send_message(config.group, mes, parse_mode="markdown")
             asyncio.create_task(delete_later(client, event.chat_id, event.id, 10))
             asyncio.create_task(delete_later(client, message.chat_id, message.id, 10))
         return
@@ -196,7 +185,7 @@ async def zq_bet_on(client, event):
                     **⚡ 押注： {"押大" if check else "押小"}
 💵 金额： {variable.bet_amount}**
                     """
-                    m = await client.send_message(config.user, mes, parse_mode="markdown")
+                    m = await client.send_message(config.group, mes, parse_mode="markdown")
                     asyncio.create_task(delete_later(client, m.chat_id, m.id, 60))
                     variable.mark = True
                 else:
@@ -220,7 +209,7 @@ async def zq_bet_on(client, event):
         variable.bet = False
         variable.win_count = 0
         variable.lose_count = 0
-        m = await client.send_message(config.user, f"**没有足够资金进行押注 请重置余额**")
+        m = await client.send_message(config.group, f"**没有足够资金进行押注 请重置余额**")
         asyncio.create_task(delete_later(client, m.chat_id, m.id, 60))
 
 
@@ -414,11 +403,11 @@ async def zq_settle(client, event):
                 variable.flag = False
                 if variable.explode_count >= variable.explode:
                     mes = f"""**💥 本轮炸了收益如下：{variable.period_profit} 灵石**\n"""
-                    await client.send_message(config.user, mes, parse_mode="markdown")
+                    await client.send_message(config.group, mes, parse_mode="markdown")
                     variable.stop_count = variable.stop
                 elif variable.period_profit >= variable.profit:
                     mes = f"""**📈 本轮赢了一共赢得：{variable.period_profit} 灵石**"""
-                    await client.send_message(config.user, mes, parse_mode="markdown")
+                    await client.send_message(config.group, mes, parse_mode="markdown")
                     variable.stop_count = variable.profit_stop
                 else:
                     variable.stop_count = variable.stop
@@ -453,7 +442,7 @@ async def zq_settle(client, event):
 🟢 **连“大”结果：**
 {format_counts(result_counts["大"], "大")}
                 """
-                variable.message1 = await client.send_message(config.user, mes, parse_mode="markdown")
+                variable.message1 = await client.send_message(config.group, mes, parse_mode="markdown")
                 result_counts = count_consecutive(variable.history[-200::])
                 # 创建消息
                 mes = f"""
@@ -463,7 +452,7 @@ async def zq_settle(client, event):
 🟢 **连“大”结果：**
 {format_counts(result_counts["大"], "大")}
                  """
-                variable.message3 = await client.send_message(config.user, mes, parse_mode="markdown")
+                variable.message3 = await client.send_message(config.group, mes, parse_mode="markdown")
         if variable.message is not None:
             await variable.message.delete()
         reversed_data = ["✅" if x == 1 else "❌" for x in variable.history[-40::][::-1]]  # 倒序列表
@@ -489,9 +478,9 @@ async def zq_settle(client, event):
             mes += f"""\n\n还剩 {variable.stop_count} 局恢复押注"""
         if variable.bet:
             mess = f"""**📉 输赢统计： {"赢" if variable.status else "输"} {int(variable.bet_amount * 0.99) if variable.status else variable.bet_amount}\n🎲 结果： {event.pattern_match.group(2)}**"""
-            m = await client.send_message(config.user, mess, parse_mode="markdown")
+            m = await client.send_message(config.group, mess, parse_mode="markdown")
             asyncio.create_task(delete_later(client, m.chat_id, m.id, 60))
-        variable.message = await client.send_message(config.user, mes, parse_mode="markdown")
+        variable.message = await client.send_message(config.group, mes, parse_mode="markdown")
         # 根据是否押注来统计 胜率和押注局数
 
 
@@ -520,12 +509,12 @@ async def qz_red_packet(client, event, functions):
                             if re.search(r"已获得 (\d+) 灵石", response.message):
                                 # 匹配 "已获得 xxx 灵石"
                                 bonus = re.search(r"已获得 (\d+) 灵石", response.message).group(1)
-                                await client.send_message(config.user, f"🎉 抢到红包{bonus}灵石！")
+                                await client.send_message(config.group, f"🎉 抢到红包{bonus}灵石！")
                                 print("你成功领取了灵石！")
                                 return
                             elif re.search("不能重复领取", response.message):
                                 # 匹配 "不能重复领取"
-                                await client.send_message(config.user, f"⚠️ 抢到红包，但是没有获取到灵石数量！")
+                                await client.send_message(config.group, f"⚠️ 抢到红包，但是没有获取到灵石数量！")
                                 print("不能重复领取的提示")
                                 return
                         await asyncio.sleep(1)
@@ -619,11 +608,11 @@ async def zq_shoot(client, event):
                 if user is not None:
                     update_user(event.sender_id, user_id, name=user_name, amount=user["amount"] + int(amount),
                                 count=user["count"] + 1)
-                    await client.send_message(config.user, f"{user_name} 向您转账 {amount} 爱心", parse_mode="markdown")
+                    await client.send_message(config.group, f"{user_name} 向您转账 {amount} 爱心", parse_mode="markdown")
                 else:
                     add_user(event.sender_id, user_id, name=user_name, amount=int(amount), count=1, neg_amount=0,
                              neg_count=0)
-                    await client.send_message(config.user, f"{user_name} 向您转账 {amount} 爱心", parse_mode="markdown")
+                    await client.send_message(config.group, f"{user_name} 向您转账 {amount} 爱心", parse_mode="markdown")
 
                 all_users = query_users(event.sender_id, order="DESC")
                 # 找到当前用户在排序中的位置
