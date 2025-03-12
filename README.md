@@ -23,7 +23,7 @@ source myenv/bin/activate
 pip install telethon 
 
 # 后台运行py文件
-nohup python3 main.py &
+nohup python3 main.py & 
 
 # 退出虚拟环境
 deactivate
