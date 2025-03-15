@@ -7,7 +7,7 @@ import asyncio
 import re
 import os
 import random
-
+import numpy as np
 
 async def zq_user(client, event):
     my = event.raw_text.split(" ")
@@ -162,7 +162,8 @@ async def zq_bet_on(client, event):
                 print(f"开始押注！")
                 # 获取压大还是小
                 if variable.mode == 1:
-                    check = predict_next_bet(variable.i)
+                    # check = predict_next_bet(variable.i)
+                    check = predict_next_bet_v5_7(variable.total)
                 elif variable.mode == 0:
                     check = predict_next_trend(variable.history)
                 else:
@@ -228,6 +229,123 @@ def predict_next_combined_trend(history):
         return 0
     else:
         return random.choice([0, 1])
+
+# V5.7 新增辅助函数
+def ewma_weights(window_size, alpha=0.3):
+    """
+    生成动态窗口权重（指数加权移动平均）
+    :param window_size: 窗口大小
+    :param alpha: 平滑因子，控制近期数据权重，范围 (0, 1)，默认 0.3
+    :return: 标准化后的权重数组
+    """
+    weights = [(1 - alpha) ** i for i in range(window_size)]
+    weights.reverse()  # 确保近期数据权重更高
+    return np.array(weights) / sum(weights)
+
+def calculate_correction_factor(history, recent_predictions, window=5):
+    """
+    计算自适应偏差修正系数
+    :param history: 历史结果列表 (0 或 1)
+    :param recent_predictions: 近期预测列表 (0 或 1)
+    :param window: 计算窗口大小，默认为 5
+    :return: 修正系数
+    """
+    if len(history) < window or len(recent_predictions) < window:
+        return 0  # 数据不足，不修正
+    recent_history = history[-window:]
+    recent_preds = recent_predictions[-window:]
+    mismatches = sum(1 for actual, pred in zip(recent_history, recent_preds) if actual != pred)
+    correction = (mismatches / window) * 0.2  # 偏差比例 * 调节因子 (0.2)
+    return correction
+
+def calculate_volatility(history):
+    if len(history) < 10:
+        return 0.5
+    recent = history[-10:]
+    transitions = sum(1 for i in range(1, len(recent)) if recent[i] != recent[i-1])
+    return transitions / (len(recent) - 1)
+
+def analyze_long_pattern(history):
+    last_40 = history[-40:] if len(history) >= 40 else history
+    two_consecutive_0 = sum(1 for i in range(len(last_40) - 1) if last_40[i:i+2] == [0, 0])
+    two_consecutive_1 = sum(1 for i in range(len(last_40) - 1) if last_40[i:i+2] == [1, 1])
+    three_consecutive_0 = sum(1 for i in range(len(last_40) - 2) if last_40[i:i+3] == [0, 0, 0])
+    three_consecutive_1 = sum(1 for i in range(len(last_40) - 2) if last_40[i:i+3] == [1, 1, 1])
+    total_long = two_consecutive_0 + two_consecutive_1 + 2 * (three_consecutive_0 + three_consecutive_1)
+    total = len(last_40) - 1
+    return total_long / total > 0.3
+
+def predict_next_bet_v5_7(current_round: int) -> int:
+    """V5.7 预测算法 - 微调版"""
+    if not variable.history:
+        return random.randint(0, 1)
+
+    # 计算波动率并动态选择窗口，阈值从 0.3/0.5 改为 0.4/0.6
+    # - 原因：放宽窗口切换条件（0.4 > 0.3），倾向于使用更大窗口（15），更有利于捕捉长趋势
+    volatility = calculate_volatility(variable.history)
+    window = 15 if volatility < 0.4 else 10 if volatility < 0.6 else 5
+    recent = variable.history[-window:] if len(variable.history) >= window else variable.history
+
+    # 计算加权模式
+    weights = ewma_weights(window, alpha=0.5)  # alpha 已调整为 0.5
+    consecutive_weight = 0
+    alternation_weight = 0
+    for i in range(1, len(recent)):
+        if recent[i] == recent[i-1]:
+            consecutive_weight += weights[i]
+        else:
+            alternation_weight += weights[i]
+    total_weight = sum(weights[1:])
+
+    # 计算胜率和动态阈值
+    win_rate = variable.win_count / (variable.win_count + variable.lose_count) if (variable.win_count + variable.lose_count) > 0 else 0.5
+    long_consecutive_threshold = 5 if win_rate < 0.4 else 4 if win_rate < 0.6 else 3
+
+    # 计算连续性
+    consecutive = 1
+    for i in range(len(recent)-1, 0, -1):
+        if recent[i] == recent[i-1]:
+            consecutive += weights[i]
+        else:
+            break
+
+    # 模式分类
+    if consecutive >= long_consecutive_threshold:
+        mode = "long_consecutive"
+        variable.last_predict_info = f"long_consecutive ({consecutive:.1f} 加权连续)"
+        prediction = recent[-1]
+    elif alternation_weight >= 0.6 * total_weight and len(recent) >= 4:  # 阈值从 0.7 改为 0.6
+        # - 原因：降低交替触发条件（0.6 < 0.7），倾向于识别交替模式，更有利于捕捉近期切换规律
+        mode = "alternate"
+        variable.last_predict_info = f"alternate (交替 {alternation_weight:.1f}/{total_weight:.1f})"
+        prediction = 1 - recent[-1]  # 交替预测相反结果
+    elif consecutive >= 1.5:  # 阈值从 2 改为 1.5
+        # - 原因：降低弱连续触发条件（1.5 < 2），倾向于识别短期连续，更有利于捕捉2-3连的规律
+        mode = "weak_consecutive"
+        variable.last_predict_info = f"weak_consecutive ({consecutive:.1f} 加权连续)"
+        prediction = recent[-1]
+    else:
+        mode = "random"
+        variable.last_predict_info = "random (无明显模式)"
+        prediction = random.randint(0, 1)
+        if analyze_long_pattern(variable.history):
+            prediction = 1  # 长模式偏向“大”
+
+
+    # 趋势强度判断与暂停机制，连输阈值从 3 改为 4
+    # - 原因：减少暂停频率（4 > 3），倾向于持续预测，更有利于在连输后捕捉反转规律
+    trend_strength = "strong" if mode == "long_consecutive" else "weak" if mode in ["weak_consecutive", "alternate"] else "none"
+    if trend_strength == "none" and variable.lose_count >= 4:
+        return -1  # 表示暂停
+
+    # 偏差修正
+    correction_factor = calculate_correction_factor(variable.history, variable.predictions)
+    if variable.lose_count >= 3 and random.random() < correction_factor:
+        prediction = 1 - prediction
+        variable.last_predict_info += f" [偏差修正]"
+
+    variable.predictions.append(prediction)
+    return prediction
 
 
 def predict_next_bet(current_round):
