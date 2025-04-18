@@ -9,6 +9,7 @@ import os
 import random
 import numpy as np
 
+
 async def zq_user(client, event):
     my = event.raw_text.split(" ")
     # Help 命令
@@ -163,7 +164,7 @@ async def zq_bet_on(client, event):
                 # 获取压大还是小
                 if variable.mode == 1:
                     # check = predict_next_bet(variable.i)
-                    check = predict_next_bet_v5_7(variable.total)
+                    check = predict_next_trend1(variable.history[-200::])
                 elif variable.mode == 0:
                     check = predict_next_trend(variable.history)
                 else:
@@ -230,6 +231,7 @@ def predict_next_combined_trend(history):
     else:
         return random.choice([0, 1])
 
+
 # V5.7 新增辅助函数
 def ewma_weights(window_size, alpha=0.3):
     """
@@ -241,6 +243,7 @@ def ewma_weights(window_size, alpha=0.3):
     weights = [(1 - alpha) ** i for i in range(window_size)]
     weights.reverse()  # 确保近期数据权重更高
     return np.array(weights) / sum(weights)
+
 
 def calculate_correction_factor(history, recent_predictions, window=5):
     """
@@ -258,22 +261,25 @@ def calculate_correction_factor(history, recent_predictions, window=5):
     correction = (mismatches / window) * 0.2  # 偏差比例 * 调节因子 (0.2)
     return correction
 
+
 def calculate_volatility(history):
     if len(history) < 10:
         return 0.5
     recent = history[-10:]
-    transitions = sum(1 for i in range(1, len(recent)) if recent[i] != recent[i-1])
+    transitions = sum(1 for i in range(1, len(recent)) if recent[i] != recent[i - 1])
     return transitions / (len(recent) - 1)
+
 
 def analyze_long_pattern(history):
     last_40 = history[-40:] if len(history) >= 40 else history
-    two_consecutive_0 = sum(1 for i in range(len(last_40) - 1) if last_40[i:i+2] == [0, 0])
-    two_consecutive_1 = sum(1 for i in range(len(last_40) - 1) if last_40[i:i+2] == [1, 1])
-    three_consecutive_0 = sum(1 for i in range(len(last_40) - 2) if last_40[i:i+3] == [0, 0, 0])
-    three_consecutive_1 = sum(1 for i in range(len(last_40) - 2) if last_40[i:i+3] == [1, 1, 1])
+    two_consecutive_0 = sum(1 for i in range(len(last_40) - 1) if last_40[i:i + 2] == [0, 0])
+    two_consecutive_1 = sum(1 for i in range(len(last_40) - 1) if last_40[i:i + 2] == [1, 1])
+    three_consecutive_0 = sum(1 for i in range(len(last_40) - 2) if last_40[i:i + 3] == [0, 0, 0])
+    three_consecutive_1 = sum(1 for i in range(len(last_40) - 2) if last_40[i:i + 3] == [1, 1, 1])
     total_long = two_consecutive_0 + two_consecutive_1 + 2 * (three_consecutive_0 + three_consecutive_1)
     total = len(last_40) - 1
     return total_long / total > 0.3
+
 
 def predict_next_bet_v5_7(current_round: int) -> int:
     """V5.7 预测算法 - 微调版"""
@@ -291,20 +297,21 @@ def predict_next_bet_v5_7(current_round: int) -> int:
     consecutive_weight = 0
     alternation_weight = 0
     for i in range(1, len(recent)):
-        if recent[i] == recent[i-1]:
+        if recent[i] == recent[i - 1]:
             consecutive_weight += weights[i]
         else:
             alternation_weight += weights[i]
     total_weight = sum(weights[1:])
 
     # 计算胜率和动态阈值
-    win_rate = variable.win_count / (variable.win_count + variable.lose_count) if (variable.win_count + variable.lose_count) > 0 else 0.5
+    win_rate = variable.win_count / (variable.win_count + variable.lose_count) if (
+                                                                                          variable.win_count + variable.lose_count) > 0 else 0.5
     long_consecutive_threshold = 5 if win_rate < 0.4 else 4 if win_rate < 0.6 else 3
 
     # 计算连续性
     consecutive = 1
-    for i in range(len(recent)-1, 0, -1):
-        if recent[i] == recent[i-1]:
+    for i in range(len(recent) - 1, 0, -1):
+        if recent[i] == recent[i - 1]:
             consecutive += weights[i]
         else:
             break
@@ -331,10 +338,10 @@ def predict_next_bet_v5_7(current_round: int) -> int:
         if analyze_long_pattern(variable.history):
             prediction = 1  # 长模式偏向“大”
 
-
     # 趋势强度判断与暂停机制，连输阈值从 3 改为 4
     # - 原因：减少暂停频率（4 > 3），倾向于持续预测，更有利于在连输后捕捉反转规律
-    trend_strength = "strong" if mode == "long_consecutive" else "weak" if mode in ["weak_consecutive", "alternate"] else "none"
+    trend_strength = "strong" if mode == "long_consecutive" else "weak" if mode in ["weak_consecutive",
+                                                                                    "alternate"] else "none"
     if trend_strength == "none" and variable.lose_count >= 4:
         return -1  # 表示暂停
 
@@ -395,6 +402,21 @@ def chase_next_trend(history):
 def predict_next_trend(history):
     return 0 if history[-1] else 1
 
+
+def predict_next_trend1(history):
+    # 统计1和0的数量
+    count_ones = sum(1 for x in history if x == 1)
+
+    # 计算1和0的占比
+    prob_one = count_ones / len(history) * 100
+
+    if prob_one >= 52.5:
+        return 0
+    if prob_one >= 51:
+        return 1
+    if prob_one >= 50:
+        return 0
+    return 1
 
 def calculate_bet_amount(win_count, lose_count, initial_amount, lose_stop, lose_once, lose_twice, lose_three,
                          lose_four):
@@ -726,11 +748,13 @@ async def zq_shoot(client, event):
                 if user is not None:
                     update_user(event.sender_id, user_id, name=user_name, amount=user["amount"] + int(amount),
                                 count=user["count"] + 1)
-                    await client.send_message(config.group, f"{user_name} 向您转账 {amount} 爱心", parse_mode="markdown")
+                    await client.send_message(config.group, f"{user_name} 向您转账 {amount} 爱心",
+                                              parse_mode="markdown")
                 else:
                     add_user(event.sender_id, user_id, name=user_name, amount=int(amount), count=1, neg_amount=0,
                              neg_count=0)
-                    await client.send_message(config.group, f"{user_name} 向您转账 {amount} 爱心", parse_mode="markdown")
+                    await client.send_message(config.group, f"{user_name} 向您转账 {amount} 爱心",
+                                              parse_mode="markdown")
 
                 all_users = query_users(event.sender_id, order="DESC")
                 # 找到当前用户在排序中的位置
