@@ -164,7 +164,7 @@ async def zq_bet_on(client, event):
                 # 获取压大还是小
                 if variable.mode == 1:
                     # check = predict_next_bet(variable.i)
-                    check = predict_next_trend1(variable.history[-200::])
+                    check = predict_next_bet_v5_7(variable.total)
                 elif variable.mode == 0:
                     check = predict_next_trend(variable.history)
                 else:
