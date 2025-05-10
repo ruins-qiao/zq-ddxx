@@ -17,7 +17,7 @@ sudo apt install python3-venv
 python3 -m venv myenv
 
 # 激活虚拟环境
-source myenv/bin/activate
+source myenv/bin/activate 
 
 # 在虚拟环境中依赖包
 pip install telethon 
