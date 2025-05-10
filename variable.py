@@ -68,7 +68,7 @@ total = 0
 win_total = 0
 
 # 初始金额
-initial_amount = 10000
+initial_amount = 1000
 
 # 余额
 balance = 300000
