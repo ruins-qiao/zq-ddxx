@@ -29,6 +29,13 @@ async def zq_user(client, event):
         asyncio.create_task(delete_later(client, message.chat_id, message.id, 60))
         return
     if "st" == my[0]:
+        if my[1] == "auto":
+            variable.auto = True
+            mes = f"""启动自动切换策略"""
+            message = await client.send_message(config.group, mes, parse_mode="markdown")
+            asyncio.create_task(delete_later(client, event.chat_id, event.id, 10))
+            asyncio.create_task(delete_later(client, message.chat_id, message.id, 10))
+            return
         yss = query_records(my[1])
         variable.continuous = yss["count"]
         variable.lose_stop = yss["field2"]
@@ -534,6 +541,22 @@ async def zq_settle(client, event):
                     variable.win_count = 0
                     variable.lose_count += 1
                     variable.status = 0
+            if variable.auto:
+                yss = query_records(type_id=None)
+                for ys in yss :
+                    if (variable.balance*0.33) >= calculate_losses(ys["field2"],ys["amount"],ys["field3"],ys["field4"],ys["field5"],ys["field6"]):
+                        variable.continuous = ys["count"]
+                        variable.lose_stop = ys["field2"]
+                        variable.lose_once = ys["field3"]
+                        variable.lose_twice = ys["field4"]
+                        variable.lose_three = ys["field5"]
+                        variable.lose_four = ys["field6"]
+                        variable.initial_amount = ys["amount"]
+                        mes = f"""启动 {ys["type"]}"""
+                        message = await client.send_message(config.group, mes, parse_mode="markdown")
+                        asyncio.create_task(delete_later(client, event.chat_id, event.id, 10))
+                        asyncio.create_task(delete_later(client, message.chat_id, message.id, 10))
+                        break
             if variable.mode == 1 or variable.mode == 2:
                 if variable.lose_count >= 3:
                     variable.forecast_stop = False
@@ -563,7 +586,7 @@ async def zq_settle(client, event):
                 variable.win_count = 0
                 variable.lose_count = 0
                 mes = f"""恢复押注"""
-                message = await client.send_message('me', mes, parse_mode="markdown")
+                message = await client.send_message(config.group, mes, parse_mode="markdown")
                 asyncio.create_task(delete_later(client, message.chat_id, message.id, 30))
 
         # 获取统计结果
@@ -1036,7 +1059,7 @@ def query_records(type_id=None):
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         if type_id is None:
-            cursor.execute("SELECT * FROM ys_data")
+            cursor.execute("SELECT * FROM ys_data ORDER BY amount")
             return [dict(row) for row in cursor.fetchall()]
         else:
             cursor.execute("SELECT * FROM ys_data WHERE type = ?", (type_id,))
