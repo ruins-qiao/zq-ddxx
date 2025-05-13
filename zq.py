@@ -31,6 +31,8 @@ async def zq_user(client, event):
     if "st" == my[0]:
         if my[1] == "auto":
             variable.auto = True
+            if len(my) > 2:
+                variable.proportion = float(my[2])
             mes = f"""启动自动切换策略"""
             message = await client.send_message(config.group, mes, parse_mode="markdown")
             asyncio.create_task(delete_later(client, event.chat_id, event.id, 10))
@@ -541,7 +543,7 @@ async def zq_settle(client, event):
             else:
                 yss = query_records(type_id=None)
                 for ys in yss:
-                    if (variable.balance * 0.33) >= calculate_losses(ys["field2"], ys["amount"], ys["field3"], ys["field4"],
+                    if (variable.balance * variable.proportion) >= calculate_losses(ys["field2"], ys["amount"], ys["field3"], ys["field4"],
                                                                      ys["field5"], ys["field6"]):
                         if variable.initial_amount != ys["amount"]:
                             variable.continuous = ys["count"]

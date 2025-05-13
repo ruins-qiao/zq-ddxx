@@ -5,6 +5,8 @@ switch = True
 
 # 自动切换押注策略 根据总余额来切换占比切换 总余额*0.33 > 炸一轮的总金额 就切换到此策略
 auto = False
+# 自动切换押注策略 根据总余额占比
+proportion = 0.33
 
 # 开盘 开关
 open_ydx = False
