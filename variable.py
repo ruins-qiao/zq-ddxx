@@ -69,6 +69,9 @@ total = 0
 # 记录m1胜利局数
 win_total = 0
 
+# 记录最近100局胜负情况
+win_rate = []
+
 # 初始金额
 initial_amount = 1000
 

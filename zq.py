@@ -179,10 +179,14 @@ async def zq_bet_on(client, event):
                 elif variable.mode == 0:
                     check = predict_next_trend(variable.history)
                 else:
-                    if predict_next_bet_v5_7(variable.total) == 1:
-                        check = 0
+                    val = predict_next_bet_v5_7(variable.total)
+                    if calculate_ones_ratio(variable.win_rate) >=0.475:
+                        check = val
                     else:
-                        check = 1
+                        if val == 1:
+                            check = 0
+                        else:
+                            check = 1
                 print(f"本次押注：{check}")
                 variable.i += 1
                 # 获取押注金额 根据连胜局数和底价进行计算
@@ -378,6 +382,28 @@ def predict_next_bet(current_round):
     return variable.current_pattern[pattern_index]
 
 
+def calculate_ones_ratio(arr):
+    """
+    计算数组中1的占比
+
+    参数:
+        arr (list): 只包含0和1的数组
+
+    返回:
+        float: 1的占比（0到1之间的小数）
+    """
+    if not arr:  # 如果数组为空
+        return 0.0
+
+    count_ones = sum(arr)
+    total = len(arr)
+    return count_ones / total
+
+def add(self, value):
+    if len(self)>=100:
+        self.pop(0)
+    self.append(value)
+
 def calculate_losses(cycles, initial, rate1, rate2, rate3, rate4):
     total = 0
     current_bet = initial
@@ -568,6 +594,7 @@ async def zq_settle(client, event):
                     variable.win_count = 0
                     variable.lose_count += 1
                     variable.status = 0
+            add(variable.win_rate,variable.status)
             if variable.mode == 1 or variable.mode == 2:
                 if variable.lose_count >= 3:
                     variable.forecast_stop = False
