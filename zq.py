@@ -39,6 +39,7 @@ async def zq_user(client, event):
             asyncio.create_task(delete_later(client, message.chat_id, message.id, 10))
             return
         else:
+            variable.auto = False
             yss = query_records(my[1])
             variable.continuous = yss["count"]
             variable.lose_stop = yss["field2"]
@@ -178,7 +179,10 @@ async def zq_bet_on(client, event):
                 elif variable.mode == 0:
                     check = predict_next_trend(variable.history)
                 else:
-                    check = chase_next_trend(variable.history)
+                    if predict_next_bet_v5_7(variable.total) == 1:
+                        check = 0
+                    else:
+                        check = 1
                 print(f"本次押注：{check}")
                 variable.i += 1
                 # 获取押注金额 根据连胜局数和底价进行计算
