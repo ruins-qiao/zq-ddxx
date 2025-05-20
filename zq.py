@@ -180,13 +180,13 @@ async def zq_bet_on(client, event):
                     check = predict_next_trend(variable.history)
                 else:
                     val = predict_next_bet_v5_7(variable.total)
-                    if calculate_ones_ratio(variable.win_rate) >=0.475:
-                        check = val
+                    # if calculate_ones_ratio(variable.win_rate) >=0.475:
+                    #     check = val
+                    # else:
+                    if val == 1:
+                        check = 0
                     else:
-                        if val == 1:
-                            check = 0
-                        else:
-                            check = 1
+                        check = 1
                 print(f"本次押注：{check}")
                 variable.i += 1
                 # 获取押注金额 根据连胜局数和底价进行计算
