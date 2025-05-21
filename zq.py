@@ -183,10 +183,13 @@ async def zq_bet_on(client, event):
                     # if calculate_ones_ratio(variable.win_rate) >=0.475:
                     #     check = val
                     # else:
-                    if val == 1:
-                        check = 0
+                    if five_consecutive:
+                        check = val
                     else:
-                        check = 1
+                        if val == 1:
+                            check = 0
+                        else:
+                            check = 1
                 print(f"本次押注：{check}")
                 variable.i += 1
                 # 获取押注金额 根据连胜局数和底价进行计算
@@ -248,6 +251,20 @@ def predict_next_combined_trend(history):
         return 0
     else:
         return random.choice([0, 1])
+
+def five_consecutive(history):
+    """
+    计算最近五局是否五连
+    """
+    total = 0
+    var = history[-4::]
+    for i in var :
+        total += i
+    if total==4 or total==0:
+        return True
+    else:
+        return False
+
 
 
 # V5.7 新增辅助函数
@@ -335,12 +352,11 @@ def predict_next_bet_v5_7(current_round: int) -> int:
             break
 
     # 模式分类
-    # if consecutive >= long_consecutive_threshold:
-    #     mode = "long_consecutive"
-    #     variable.last_predict_info = f"long_consecutive ({consecutive:.1f} 加权连续)"
-    #     prediction = recent[-1]
-    # el
-    if alternation_weight >= 0.8 * total_weight and len(recent) >= 4:  # 阈值从 0.7 改为 0.6
+    if consecutive >= long_consecutive_threshold:
+        mode = "long_consecutive"
+        variable.last_predict_info = f"long_consecutive ({consecutive:.1f} 加权连续)"
+        prediction = recent[-1]
+    elif alternation_weight >= 0.8 * total_weight and len(recent) >= 4:  # 阈值从 0.7 改为 0.6
         # - 原因：降低交替触发条件（0.6 < 0.7），倾向于识别交替模式，更有利于捕捉近期切换规律
         mode = "alternate"
         variable.last_predict_info = f"alternate (交替 {alternation_weight:.1f}/{total_weight:.1f})"
