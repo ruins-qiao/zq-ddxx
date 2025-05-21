@@ -335,11 +335,12 @@ def predict_next_bet_v5_7(current_round: int) -> int:
             break
 
     # 模式分类
-    if consecutive >= long_consecutive_threshold:
-        mode = "long_consecutive"
-        variable.last_predict_info = f"long_consecutive ({consecutive:.1f} 加权连续)"
-        prediction = recent[-1]
-    elif alternation_weight >= 0.8 * total_weight and len(recent) >= 4:  # 阈值从 0.7 改为 0.6
+    # if consecutive >= long_consecutive_threshold:
+    #     mode = "long_consecutive"
+    #     variable.last_predict_info = f"long_consecutive ({consecutive:.1f} 加权连续)"
+    #     prediction = recent[-1]
+    # el
+    if alternation_weight >= 0.8 * total_weight and len(recent) >= 4:  # 阈值从 0.7 改为 0.6
         # - 原因：降低交替触发条件（0.6 < 0.7），倾向于识别交替模式，更有利于捕捉近期切换规律
         mode = "alternate"
         variable.last_predict_info = f"alternate (交替 {alternation_weight:.1f}/{total_weight:.1f})"
