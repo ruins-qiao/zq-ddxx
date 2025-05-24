@@ -1,5 +1,5 @@
 import sqlite3
-
+import aiohttp
 import variable
 import config
 from collections import defaultdict
@@ -235,6 +235,20 @@ async def zq_bet_on(client, event):
         m = await client.send_message(config.group, f"**没有足够资金进行押注 请重置余额**")
         asyncio.create_task(delete_later(client, m.chat_id, m.id, 60))
 
+# 3.3 异步获取账户余额
+async def fetch_account_balance():
+    """异步获取账户余额，失败时返回旧值"""
+    headers = {
+        "Cookie": config.ZHUQUE_COOKIE,
+        "X-Csrf-Token": config.ZHUQUE_X_CSRF
+    }
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(config.ZHUQUE_API_URL, headers=headers, timeout=aiohttp.ClientTimeout(total=5)) as response:
+                data = await response.json()
+                return int(data.get("data", {}).get("bonus", variable.balance))
+    except Exception:
+        return variable.balance
 
 def predict_next_combined_trend(history):
     """
@@ -646,7 +660,8 @@ async def zq_settle(client, event):
 
         # 获取统计结果
         if len(variable.history) > 3:
-            if len(variable.history) % 5 == 0:
+            if len(variable.history) % 10 == 0:
+                variable.balance = await fetch_account_balance()
                 if variable.message1 is not None:
                     await variable.message1.delete()
                 if variable.message3 is not None:
