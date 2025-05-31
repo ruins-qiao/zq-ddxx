@@ -8,7 +8,7 @@
 
 自定义telegram客户端，处理群组消息实现特定功能
 
-## 安装使用
+## 安装使用 
 ```bash
 # 安装 virtualenv
 sudo apt install python3-venv
