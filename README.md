@@ -8,7 +8,7 @@
 
 自定义telegram客户端，处理群组消息实现特定功能
 
-## 安装使用
+## 安装使用 
 ```bash
 # 安装 virtualenv
 sudo apt install python3-venv
@@ -17,7 +17,7 @@ sudo apt install python3-venv
 python3 -m venv myenv
 
 # 激活虚拟环境
-source myenv/bin/activate 
+source myenv/bin/activate
 
 # 在虚拟环境中依赖包
 pip install telethon 
