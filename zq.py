@@ -62,6 +62,13 @@ async def zq_user(client, event):
         asyncio.create_task(delete_later(client, event.chat_id, event.id, 10))
         asyncio.create_task(delete_later(client, message.chat_id, message.id, 10))
         return
+    if "resl" == my[0]:
+        variable.temporary_balance = 450000
+        mes = f"""重置成功"""
+        message = await client.send_message(config.group, mes, parse_mode="markdown")
+        asyncio.create_task(delete_later(client, event.chat_id, event.id, 10))
+        asyncio.create_task(delete_later(client, message.chat_id, message.id, 10))
+        return
     if "set" == my[0]:
         variable.explode = int(my[1])
         variable.profit = int(my[2])
@@ -575,8 +582,7 @@ async def zq_settle(client, event):
         if variable.auto:
              yss = query_records(type_id=None)
              for ys in yss:
-                 if (variable.balance * variable.proportion) >= calculate_losses(ys["field2"], ys["amount"], ys["field3"], ys["field4"],
-                                                                  ys["field5"], ys["field6"]):
+                 if (variable.temporary_balance * variable.proportion) >= calculate_losses(ys["field2"], ys["amount"], ys["field3"], ys["field4"],ys["field5"], ys["field6"]):
                      if variable.initial_amount != ys["amount"]:
                          variable.continuous = ys["count"]
                          variable.lose_stop = ys["field2"]
@@ -599,6 +605,7 @@ async def zq_settle(client, event):
                     variable.earnings += (int(variable.bet_amount * 0.99))
                     variable.period_profit += (int(variable.bet_amount * 0.99))
                     variable.balance += (int(variable.bet_amount * 0.99))
+                    variable.temporary_balance += (int(variable.bet_amount * 0.99))
                     variable.win_count += 1
                     variable.lose_count = 0
                     variable.status = 1
@@ -606,6 +613,7 @@ async def zq_settle(client, event):
                     variable.earnings -= variable.bet_amount
                     variable.period_profit -= variable.bet_amount
                     variable.balance -= variable.bet_amount
+                    variable.temporary_balance -= variable.bet_amount
                     variable.win_count = 0
                     variable.lose_count += 1
                     variable.status = 0
@@ -615,6 +623,7 @@ async def zq_settle(client, event):
                     variable.earnings += (int(variable.bet_amount * 0.99))
                     variable.period_profit += (int(variable.bet_amount * 0.99))
                     variable.balance += (int(variable.bet_amount * 0.99))
+                    variable.temporary_balance += (int(variable.bet_amount * 0.99))
                     variable.win_count += 1
                     variable.lose_count = 0
                     variable.status = 1
@@ -622,6 +631,7 @@ async def zq_settle(client, event):
                     variable.earnings -= variable.bet_amount
                     variable.period_profit -= variable.bet_amount
                     variable.balance -= variable.bet_amount
+                    variable.temporary_balance -= variable.bet_amount
                     variable.win_count = 0
                     variable.lose_count += 1
                     variable.status = 0
