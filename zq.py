@@ -33,6 +33,8 @@ async def zq_user(client, event):
             variable.auto = True
             if len(my) > 2:
                 variable.proportion = float(my[2])
+            if len(my) > 3:
+                variable.temporary = float(my[3])
             mes = f"""启动自动切换策略"""
             message = await client.send_message(config.group, mes, parse_mode="markdown")
             asyncio.create_task(delete_later(client, event.chat_id, event.id, 10))
@@ -63,7 +65,7 @@ async def zq_user(client, event):
         asyncio.create_task(delete_later(client, message.chat_id, message.id, 10))
         return
     if "resl" == my[0]:
-        variable.temporary_balance = 450000
+        variable.temporary_balance = variable.temporary
         mes = f"""重置成功"""
         message = await client.send_message(config.group, mes, parse_mode="markdown")
         asyncio.create_task(delete_later(client, event.chat_id, event.id, 10))
@@ -647,10 +649,12 @@ async def zq_settle(client, event):
                     mes = f"""**💥 本轮炸了收益如下：{variable.period_profit} 灵石**\n"""
                     await client.send_message(config.group, mes, parse_mode="markdown")
                     variable.stop_count = variable.stop
+                    variable.temporary_balance=variable.temporary
                 elif variable.period_profit >= variable.profit:
                     mes = f"""**📈 本轮赢了一共赢得：{variable.period_profit} 灵石**"""
                     await client.send_message(config.group, mes, parse_mode="markdown")
                     variable.stop_count = variable.profit_stop
+                    variable.temporary_balance = variable.temporary
                 else:
                     variable.stop_count = variable.stop
             if variable.stop_count > 1:
@@ -716,7 +720,7 @@ async def zq_settle(client, event):
         mes += f"""📈 **盈利限制 {variable.profit} 暂停 {variable.profit_stop} 局 **\n"""
         mes += f"""📈 **本轮盈利 {variable.period_profit}\n📉 押注倍率 {variable.lose_once} / {variable.lose_twice} / {variable.lose_three} / {variable.lose_four} **\n\n"""
         if variable.win_total > 0:
-            mes += f"""🎯 **押注次数：{variable.total}\n🏆 胜率：{variable.win_total / variable.total * 100:.2f}%\n💰 收益：{variable.earnings}\n💰 总余额：{variable.balance}**"""
+            mes += f"""🎯 **押注次数：{variable.total}\n🏆 胜率：{variable.win_total / variable.total * 100:.2f}%\n💰 收益：{variable.earnings}\n💰 临时余额：{variable.temporary_balance}\n💰 总余额：{variable.balance}**"""
         if variable.stop_count > 1:
             mes += f"""\n\n还剩 {variable.stop_count} 局恢复押注"""
         if variable.bet:

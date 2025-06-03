@@ -8,6 +8,8 @@ auto = False
 # 自动切换押注策略 根据总余额占比
 proportion = 1
 
+temporary = 450000
+
 # 开盘 开关
 open_ydx = False
 
