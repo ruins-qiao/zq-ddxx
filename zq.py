@@ -188,17 +188,7 @@ async def zq_bet_on(client, event):
                 elif variable.mode == 0:
                     check = predict_next_trend(variable.history)
                 else:
-                    val = predict_next_bet_v5_7(variable.total)
-                    # if calculate_ones_ratio(variable.win_rate) >=0.475:
-                    #     check = val
-                    # else:
-                    if five_consecutive:
-                        check = val
-                    else:
-                        if val == 1:
-                            check = 0
-                        else:
-                            check = 1
+                    check = chase_next_trend(variable.history)
                 print(f"本次押注：{check}")
                 variable.i += 1
                 # 获取押注金额 根据连胜局数和底价进行计算
@@ -475,8 +465,10 @@ def chase_next_trend(history):
     """
     if len(history) < 1:
         return random.choice([0, 1])
-
-    return 1 if history[-1] else 0
+    if history[-2]==history[-1]:
+        return history[-1]
+    else:
+        return history[-2]
 
 
 def predict_next_trend(history):
