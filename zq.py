@@ -495,10 +495,10 @@ def predict_next_trend1(history):
 
 def calculate_bet_amount(win_count, lose_count, initial_amount, lose_stop, lose_once, lose_twice, lose_three,
                          lose_four):
-    if win_count == 0 and lose_count == 0:
+    if win_count-1 == 0 and lose_count == 0:
         return closest_multiple_of_500(initial_amount)
-    elif win_count > 0 and lose_count == 0:
-        if 0 < win_count < variable.win:
+    elif win_count-1 > 0 and lose_count == 0:
+        if 0 < win_count-1 < variable.win:
             return closest_multiple_of_500(variable.bet_amount * 2)
         else:
             return closest_multiple_of_500(initial_amount)
