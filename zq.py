@@ -35,6 +35,7 @@ async def zq_user(client, event):
                 variable.proportion = float(my[2])
             if len(my) > 3:
                 variable.temporary = float(my[3])
+                variable.temporary_balance = variable.temporary
             mes = f"""启动自动切换策略"""
             message = await client.send_message(config.group, mes, parse_mode="markdown")
             asyncio.create_task(delete_later(client, event.chat_id, event.id, 10))
@@ -59,13 +60,6 @@ async def zq_user(client, event):
         variable.win_total = 0
         variable.total = 0
         variable.earnings = 0
-        mes = f"""重置成功"""
-        message = await client.send_message(config.group, mes, parse_mode="markdown")
-        asyncio.create_task(delete_later(client, event.chat_id, event.id, 10))
-        asyncio.create_task(delete_later(client, message.chat_id, message.id, 10))
-        return
-    if "resl" == my[0]:
-        variable.temporary_balance = variable.temporary
         mes = f"""重置成功"""
         message = await client.send_message(config.group, mes, parse_mode="markdown")
         asyncio.create_task(delete_later(client, event.chat_id, event.id, 10))
@@ -190,7 +184,7 @@ async def zq_bet_on(client, event):
                 elif variable.mode == 0:
                     check = predict_next_trend(variable.history)
                 else:
-                    check = chase_next_trend(variable.history,variable.lose_count)
+                    check = chase_next_trend(variable.history, variable.lose_count)
                 print(f"本次押注：{check}")
                 variable.i += 1
                 # 获取押注金额 根据连胜局数和底价进行计算
@@ -236,6 +230,7 @@ async def zq_bet_on(client, event):
         m = await client.send_message(config.group, f"**没有足够资金进行押注 请重置余额**")
         asyncio.create_task(delete_later(client, m.chat_id, m.id, 60))
 
+
 # 3.3 异步获取账户余额
 async def fetch_account_balance():
     """异步获取账户余额，失败时返回旧值"""
@@ -245,11 +240,13 @@ async def fetch_account_balance():
     }
     try:
         async with aiohttp.ClientSession() as session:
-            async with session.get(config.ZHUQUE_API_URL, headers=headers, timeout=aiohttp.ClientTimeout(total=5)) as response:
+            async with session.get(config.ZHUQUE_API_URL, headers=headers,
+                                   timeout=aiohttp.ClientTimeout(total=5)) as response:
                 data = await response.json()
                 return int(data.get("data", {}).get("bonus", variable.balance))
     except Exception:
         return variable.balance
+
 
 def predict_next_combined_trend(history):
     """
@@ -267,19 +264,19 @@ def predict_next_combined_trend(history):
     else:
         return random.choice([0, 1])
 
+
 def five_consecutive(history):
     """
     计算最近五局是否五连
     """
     total = 0
     var = history[-4::]
-    for i in var :
+    for i in var:
         total += i
-    if total==4 or total==0:
+    if total == 4 or total == 0:
         return True
     else:
         return False
-
 
 
 # V5.7 新增辅助函数
@@ -431,10 +428,12 @@ def calculate_ones_ratio(arr):
     total = len(arr)
     return count_ones / total
 
+
 def add(self, value):
-    if len(self)>=100:
+    if len(self) >= 100:
         self.pop(0)
     self.append(value)
+
 
 def calculate_losses(cycles, initial, rate1, rate2, rate3, rate4):
     total = 0
@@ -460,16 +459,17 @@ def calculate_losses(cycles, initial, rate1, rate2, rate3, rate4):
 
     return total
 
-def chase_next_trend(history,lose_count):
+
+def chase_next_trend(history, lose_count):
     """
     追投
     """
     if len(history) < 1:
         return random.choice([0, 1])
-    if history[-2]==history[-1]:
+    if history[-2] == history[-1]:
         return history[-1]
     else:
-        if lose_count==3:
+        if lose_count == 3:
             return history[-1]
         return history[-2]
 
@@ -493,15 +493,16 @@ def predict_next_trend1(history):
         return 0
     return 1
 
+
 def calculate_bet_amount(win_count, lose_count, initial_amount, lose_stop, lose_once, lose_twice, lose_three,
                          lose_four):
-    if win_count-1 == 0 and lose_count == 0:
+    if win_count == 0 and lose_count == 0:
         return closest_multiple_of_500(initial_amount)
-    elif win_count-1 > 0 and lose_count == 0:
-        if 0 < win_count-1 < variable.win:
-            return closest_multiple_of_500(variable.bet_amount * 2)
-        else:
+    elif win_count > 0 and lose_count == 0:
+        if win_count == 1:
             return closest_multiple_of_500(initial_amount)
+        if 0 < (win_count - 1) < variable.win:
+            return closest_multiple_of_500(variable.bet_amount * 2)
     else:
         if (lose_count + 1) > lose_stop:
             return 0
@@ -582,24 +583,26 @@ async def zq_settle(client, event):
         whether_bet_on(variable.win_times, variable.lose_times)
 
         if variable.auto:
-             yss = query_records(type_id=None)
-             for ys in yss:
-                 if (variable.temporary_balance * variable.proportion) >= calculate_losses(ys["field2"], ys["amount"], ys["field3"], ys["field4"],ys["field5"], ys["field6"]):
-                     if variable.initial_amount != ys["amount"]:
-                         variable.continuous = ys["count"]
-                         variable.lose_stop = ys["field2"]
-                         variable.lose_once = ys["field3"]
-                         variable.lose_twice = ys["field4"]
-                         variable.lose_three = ys["field5"]
-                         variable.lose_four = ys["field6"]
-                         variable.initial_amount = ys["amount"]
-                         mes = f"""启动 {ys["type"]}"""
-                         message = await client.send_message(config.group, mes, parse_mode="markdown")
-                         asyncio.create_task(delete_later(client, event.chat_id, event.id, 10))
-                         asyncio.create_task(delete_later(client, message.chat_id, message.id, 10))
-                         break
-                     else:
-                         break
+            yss = query_records(type_id=None)
+            for ys in yss:
+                if (variable.temporary_balance * variable.proportion) >= calculate_losses(ys["field2"], ys["amount"],
+                                                                                          ys["field3"], ys["field4"],
+                                                                                          ys["field5"], ys["field6"]):
+                    if variable.initial_amount != ys["amount"]:
+                        variable.continuous = ys["count"]
+                        variable.lose_stop = ys["field2"]
+                        variable.lose_once = ys["field3"]
+                        variable.lose_twice = ys["field4"]
+                        variable.lose_three = ys["field5"]
+                        variable.lose_four = ys["field6"]
+                        variable.initial_amount = ys["amount"]
+                        mes = f"""启动 {ys["type"]}"""
+                        message = await client.send_message(config.group, mes, parse_mode="markdown")
+                        asyncio.create_task(delete_later(client, event.chat_id, event.id, 10))
+                        asyncio.create_task(delete_later(client, message.chat_id, message.id, 10))
+                        break
+                    else:
+                        break
         if variable.bet:
             if event.pattern_match.group(2) == variable.consequence:
                 if variable.bet_type == 1:
@@ -637,7 +640,7 @@ async def zq_settle(client, event):
                     variable.win_count = 0
                     variable.lose_count += 1
                     variable.status = 0
-            add(variable.win_rate,variable.status)
+            add(variable.win_rate, variable.status)
             if variable.mode == 1 or variable.mode == 2:
                 if variable.lose_count >= 3:
                     variable.forecast_stop = False
@@ -649,7 +652,7 @@ async def zq_settle(client, event):
                     mes = f"""**💥 本轮炸了收益如下：{variable.period_profit} 灵石**\n"""
                     await client.send_message(config.group, mes, parse_mode="markdown")
                     variable.stop_count = variable.stop
-                    variable.temporary_balance=variable.temporary
+                    variable.temporary_balance = variable.temporary
                 elif variable.period_profit >= variable.profit:
                     mes = f"""**📈 本轮赢了一共赢得：{variable.period_profit} 灵石**"""
                     await client.send_message(config.group, mes, parse_mode="markdown")
@@ -721,7 +724,7 @@ async def zq_settle(client, event):
         mes += f"""📈 **本轮盈利 {variable.period_profit}\n📉 押注倍率 {variable.lose_once} / {variable.lose_twice} / {variable.lose_three} / {variable.lose_four} **\n\n"""
         if variable.win_total > 0:
             mes += f"""🎯 **押注次数：{variable.total}\n🏆 胜率：{variable.win_total / variable.total * 100:.2f}%**\n"""
-        mes +=f"""💰 **收益：{variable.earnings}\n💰 临时余额：{variable.temporary_balance}\n💰 总余额：{variable.balance}**\n"""
+        mes += f"""💰 **收益：{variable.earnings}\n💰 临时余额：{variable.temporary_balance}\n💰 总余额：{variable.balance}**\n"""
         if variable.stop_count > 1:
             mes += f"""\n\n还剩 {variable.stop_count} 局恢复押注"""
         if variable.bet:
