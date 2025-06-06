@@ -10,6 +10,8 @@ proportion = 1
 
 temporary = 450000
 
+win = 0
+
 # 开盘 开关
 open_ydx = False
 

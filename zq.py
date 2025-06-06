@@ -85,6 +85,8 @@ async def zq_user(client, event):
         return
     if "ms" == my[0]:
         variable.mode = int(my[1])
+        if len(my) > 2:
+            variable.win = int(my[2])
         mes = f"""设置成功"""
         message = await client.send_message(config.group, mes, parse_mode="markdown")
         asyncio.create_task(delete_later(client, event.chat_id, event.id, 10))
@@ -188,7 +190,7 @@ async def zq_bet_on(client, event):
                 elif variable.mode == 0:
                     check = predict_next_trend(variable.history)
                 else:
-                    check = chase_next_trend(variable.history)
+                    check = chase_next_trend(variable.history,variable.lose_count)
                 print(f"本次押注：{check}")
                 variable.i += 1
                 # 获取押注金额 根据连胜局数和底价进行计算
@@ -458,8 +460,7 @@ def calculate_losses(cycles, initial, rate1, rate2, rate3, rate4):
 
     return total
 
-
-def chase_next_trend(history):
+def chase_next_trend(history,lose_count):
     """
     追投
     """
@@ -468,6 +469,8 @@ def chase_next_trend(history):
     if history[-2]==history[-1]:
         return history[-1]
     else:
+        if lose_count==3:
+            return history[-1]
         return history[-2]
 
 
@@ -492,8 +495,13 @@ def predict_next_trend1(history):
 
 def calculate_bet_amount(win_count, lose_count, initial_amount, lose_stop, lose_once, lose_twice, lose_three,
                          lose_four):
-    if win_count >= 0 and lose_count == 0:
+    if win_count == 0 and lose_count == 0:
         return closest_multiple_of_500(initial_amount)
+    elif win_count > 0 and lose_count == 0:
+        if 0 < win_count < variable.win:
+            return closest_multiple_of_500(variable.bet_amount * 2)
+        else:
+            return closest_multiple_of_500(initial_amount)
     else:
         if (lose_count + 1) > lose_stop:
             return 0
