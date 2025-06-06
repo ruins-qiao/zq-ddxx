@@ -503,11 +503,13 @@ def calculate_bet_amount(win_count, lose_count, initial_amount, lose_stop, lose_
             return closest_multiple_of_500(initial_amount)
         if 0 < (win_count - 1) < variable.win:
             return closest_multiple_of_500(variable.bet_amount * 2)
+        if (win_count - 1)>= variable.win:
+            return variable.bet_amount
     else:
         if (lose_count + 1) > lose_stop:
             return 0
         if lose_count == 1:
-            return closest_multiple_of_500(variable.bet_amount * lose_once + (variable.bet_amount * lose_once * 0.01))
+            return closest_multiple_of_500(initial_amount * lose_once + (variable.bet_amount * lose_once * 0.01))
         if lose_count == 2:
             return closest_multiple_of_500(variable.bet_amount * lose_twice + (variable.bet_amount * lose_twice * 0.01))
         if lose_count == 3:
