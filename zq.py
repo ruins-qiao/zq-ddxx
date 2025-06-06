@@ -880,7 +880,8 @@ async def zq_shoot(client, event):
                     am = item['amount']
                     donation_list += f"     总榜Top {i}: {mask_if_less(int(amount), config.top, name)} 大佬共赏赐小弟: {mask_if_less(int(amount), config.top, count)} 次,共计: {mask_if_less(int(amount), config.top, format_number(int(am)))} 爱心\n"
                 donation_list += f"\n单次打赏>={format_number(config.top)}魔力查看打赏榜，感谢大佬，并期待您的下次打赏\n"
-                donation_list += f"小弟给大佬您共孝敬了: {user["neg_count"]} 次,共计: {format_number(user["neg_amount"])} 爱心```"
+                donation_list += f"小弟给大佬您共孝敬了: {user["neg_count"]} 次,共计: {format_number(user["neg_amount"])} 爱心"
+                donation_list += f"\n二狗哥出品，必属精品```"
                 ms = await client.send_message(event.chat_id, donation_list, reply_to=message1.id)
                 await asyncio.sleep(30)
                 await ms.delete()
