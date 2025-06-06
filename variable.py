@@ -8,7 +8,7 @@ auto = False
 # 自动切换押注策略 根据总余额占比
 proportion = 1
 
-temporary = 750000
+temporary = 1000000
 
 win = 0
 
@@ -80,10 +80,10 @@ win_rate = []
 initial_amount = 500
 
 # 余额
-balance = 300000
+balance = 1000000
 
 # 余额
-temporary_balance = 750000
+temporary_balance = 1000000
 
 # 记录押注金额
 bet_amount = 0

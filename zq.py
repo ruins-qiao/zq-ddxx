@@ -15,10 +15,10 @@ async def zq_user(client, event):
     # Help 命令
     if "h" == my[0]:
         help_message = """```使用方法：\n
-- st - 启动命令 (st ys_name )\n
+- st - 启动命令 (st ys_name ) 设置参数 auto或名称 临时余额占比0-1 临时余额 \n
 - res - 重置统计数据 (res)\n
 - set - 设置参数：被炸几次触发、赢利多少触发、炸停止多久、盈利停止多久、手动恢复对局设置为“1” (set 5 1000000 3 5 1)\n
-- ms - 切换模式：0反投,1预测,2追投 (ms 1)\n
+- ms - 切换模式：0反投,1预测,2追投 (ms 1) 设置参数 模式 赢时翻倍局数\n
 - xx - 删除群组消息 (xx)\n
 - top - 显示捐赠排行榜 (top)\n
 - ys - 保存预设策略 (ys yc 30 3 3.0 3.0 3.0 3.0 10000)\n
@@ -507,13 +507,13 @@ def calculate_bet_amount(win_count, lose_count, initial_amount, lose_stop, lose_
         if (lose_count + 1) > lose_stop:
             return 0
         if lose_count == 1:
-            return closest_multiple_of_500(initial_amount * lose_once + (variable.bet_amount * lose_once * 0.01))
+            return closest_multiple_of_500(initial_amount * lose_once)
         if lose_count == 2:
-            return closest_multiple_of_500(variable.bet_amount * lose_twice + (variable.bet_amount * lose_twice * 0.01))
+            return closest_multiple_of_500(variable.bet_amount * lose_twice)
         if lose_count == 3:
-            return closest_multiple_of_500(variable.bet_amount * lose_three + (variable.bet_amount * lose_three * 0.01))
+            return closest_multiple_of_500(variable.bet_amount * lose_three)
         if lose_count >= 4:
-            return closest_multiple_of_500(variable.bet_amount * lose_four + (variable.bet_amount * lose_four * 0.01))
+            return closest_multiple_of_500(variable.bet_amount * lose_four)
 
 
 def find_combination(target):
@@ -721,7 +721,8 @@ async def zq_settle(client, event):
         mes += f"""⏹ **押注 {variable.lose_stop} 次停止**\n"""
         mes += f"""💥 **炸 {variable.explode} 次 暂停 {variable.stop} 局**\n"""
         mes += f"""📈 **盈利限制 {variable.profit} 暂停 {variable.profit_stop} 局 **\n"""
-        mes += f"""📈 **本轮盈利 {variable.period_profit}\n📉 押注倍率 {variable.lose_once} / {variable.lose_twice} / {variable.lose_three} / {variable.lose_four} **\n\n"""
+        mes += f"""📈 **本轮盈利 {variable.period_profit}\n📉 押注倍率 {variable.lose_once} / {variable.lose_twice} / {variable.lose_three} / {variable.lose_four} **\n"""
+        mes += f"""📈 **赢二倍局数 {variable.win}**\n\n"""
         if variable.win_total > 0:
             mes += f"""🎯 **押注次数：{variable.total}\n🏆 胜率：{variable.win_total / variable.total * 100:.2f}%**\n"""
         mes += f"""💰 **收益：{variable.earnings}\n💰 临时余额：{variable.temporary_balance}\n💰 总余额：{variable.balance}**\n"""
