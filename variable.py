@@ -8,7 +8,7 @@ auto = False
 # 自动切换押注策略 根据总余额占比
 proportion = 1
 
-temporary = 450000
+temporary = 750000
 
 win = 0
 
@@ -36,9 +36,9 @@ continuous = 30
 # 炸几次停止
 explode = 1
 # 炸停止多久 单位为局
-stop = 10
+stop = 1000
 # 盈利停止多久 单位为局
-profit_stop = 50
+profit_stop = 1000
 # 记录炸几次
 explode_count = 0
 # 记录停止次数
@@ -77,13 +77,13 @@ win_total = 0
 win_rate = []
 
 # 初始金额
-initial_amount = 1000
+initial_amount = 500
 
 # 余额
 balance = 300000
 
 # 余额
-temporary_balance = 450000
+temporary_balance = 750000
 
 # 记录押注金额
 bet_amount = 0

@@ -184,7 +184,7 @@ async def zq_bet_on(client, event):
                 elif variable.mode == 0:
                     check = predict_next_trend(variable.history)
                 else:
-                    check = chase_next_trend(variable.history, variable.lose_count)
+                    check = chase_next_trend(variable.history)
                 print(f"本次押注：{check}")
                 variable.i += 1
                 # 获取押注金额 根据连胜局数和底价进行计算
@@ -458,9 +458,7 @@ def calculate_losses(cycles, initial, rate1, rate2, rate3, rate4):
         current_bet = base_bet + additional
 
     return total
-
-
-def chase_next_trend(history, lose_count):
+def chase_next_trend(history):
     """
     追投
     """
@@ -469,7 +467,7 @@ def chase_next_trend(history, lose_count):
     if history[-2] == history[-1]:
         return history[-1]
     else:
-        if lose_count == 3:
+        if variable.lose_count == 3:
             return history[-1]
         return history[-2]
 
