@@ -34,7 +34,7 @@ async def zq_user(client, event):
             if len(my) > 2:
                 variable.proportion = float(my[2])
             if len(my) > 3:
-                variable.temporary = float(my[3])
+                variable.temporary = int(my[3])
                 variable.temporary_balance = variable.temporary
             mes = f"""启动自动切换策略"""
             message = await client.send_message(config.group, mes, parse_mode="markdown")
@@ -467,7 +467,7 @@ def chase_next_trend(history):
     if history[-2] == history[-1]:
         return history[-1]
     else:
-        if variable.lose_count == 3:
+        if variable.lose_count == 2:
             return history[-1]
         return history[-2]
 
