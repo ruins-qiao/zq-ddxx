@@ -848,6 +848,7 @@ async def zq_shoot(client, event):
                 user_id = message1.sender.id
                 user_name = message1.sender.first_name
                 match = re.search(r"\+(\d+)", message1.raw_text)
+                amount = 0
                 if match:
                     amount = match.group(1)
                 print(f"收到来自他人的转账人id:{user_id}  名称：{user_name}   金额：{amount}")
