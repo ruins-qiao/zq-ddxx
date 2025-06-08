@@ -161,7 +161,7 @@ async def zq_user(client, event):
             asyncio.create_task(delete_later(client, message.chat_id, message.id, 10))
         return
     if "js" == my[0]:
-        ys = query_records(my[1])
+        ys = query_records(str(my[1]))
         if ys is not None:
             mes = "累计需要资金："
             js = calculate_losses(ys["field2"], ys["amount"],ys["field3"], ys["field4"],ys["field5"], ys["field6"])
