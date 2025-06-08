@@ -23,6 +23,7 @@ async def zq_user(client, event):
 - top - 显示捐赠排行榜 (top)\n
 - ys - 保存预设策略 (ys yc 30 3 3.0 3.0 3.0 3.0 10000)\n
 - yss - 查看或删除预设 (yss 或 yss dl yc)\n
+- js - 计算预设所需资金 (js ys1)\n
 - h - 查看帮助 (help)```"""
         message = await client.send_message(config.group, help_message, parse_mode="markdown")
         asyncio.create_task(delete_later(client, event.chat_id, event.id, 60))
@@ -159,7 +160,18 @@ async def zq_user(client, event):
             asyncio.create_task(delete_later(client, event.chat_id, event.id, 10))
             asyncio.create_task(delete_later(client, message.chat_id, message.id, 10))
         return
-
+    if "js" == my[0]:
+        ys = query_records(my[1])
+        if ys is not None:
+            mes = "累计需要资金："
+            js = calculate_losses(ys["field2"], ys["amount"],ys["field3"], ys["field4"],ys["field5"], ys["field6"])
+            mes+=js
+        else:
+            mes = "策略不存在"
+        message = await client.send_message(config.group, mes, parse_mode="markdown")
+        asyncio.create_task(delete_later(client, event.chat_id, event.id, 10))
+        asyncio.create_task(delete_later(client, message.chat_id, message.id, 10))
+        return
 
 async def zq_bet_on(client, event):
     await asyncio.sleep(5)
@@ -582,27 +594,6 @@ async def zq_settle(client, event):
         # 统计连大连小次数
         whether_bet_on(variable.win_times, variable.lose_times)
 
-        if variable.auto:
-            yss = query_records(type_id=None)
-            for ys in yss:
-                if (variable.temporary_balance * variable.proportion) >= calculate_losses(ys["field2"], ys["amount"],
-                                                                                          ys["field3"], ys["field4"],
-                                                                                          ys["field5"], ys["field6"]):
-                    if variable.initial_amount != ys["amount"]:
-                        variable.continuous = ys["count"]
-                        variable.lose_stop = ys["field2"]
-                        variable.lose_once = ys["field3"]
-                        variable.lose_twice = ys["field4"]
-                        variable.lose_three = ys["field5"]
-                        variable.lose_four = ys["field6"]
-                        variable.initial_amount = ys["amount"]
-                        mes = f"""启动 {ys["type"]}"""
-                        message = await client.send_message(config.group, mes, parse_mode="markdown")
-                        asyncio.create_task(delete_later(client, event.chat_id, event.id, 10))
-                        asyncio.create_task(delete_later(client, message.chat_id, message.id, 10))
-                        break
-                    else:
-                        break
         if variable.bet:
             if event.pattern_match.group(2) == variable.consequence:
                 if variable.bet_type == 1:
@@ -645,6 +636,27 @@ async def zq_settle(client, event):
                 if variable.lose_count >= 3:
                     variable.forecast_stop = False
                     variable.forecast_count = random.randint(1, 3)
+        if variable.auto:
+            yss = query_records(type_id=None)
+            for ys in yss:
+                if (variable.temporary_balance * variable.proportion) >= calculate_losses(ys["field2"], ys["amount"],
+                                                                                          ys["field3"], ys["field4"],
+                                                                                          ys["field5"], ys["field6"]):
+                    if variable.initial_amount != ys["amount"]:
+                        variable.continuous = ys["count"]
+                        variable.lose_stop = ys["field2"]
+                        variable.lose_once = ys["field3"]
+                        variable.lose_twice = ys["field4"]
+                        variable.lose_three = ys["field5"]
+                        variable.lose_four = ys["field6"]
+                        variable.initial_amount = ys["amount"]
+                        mes = f"""启动 {ys["type"]}"""
+                        message = await client.send_message(config.group, mes, parse_mode="markdown")
+                        asyncio.create_task(delete_later(client, event.chat_id, event.id, 10))
+                        asyncio.create_task(delete_later(client, message.chat_id, message.id, 10))
+                        break
+                    else:
+                        break
         if variable.explode_count >= variable.explode or variable.period_profit >= variable.profit:
             if variable.flag:
                 variable.flag = False
