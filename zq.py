@@ -165,7 +165,7 @@ async def zq_user(client, event):
         if ys is not None:
             mes = "累计需要资金："
             js = calculate_losses(ys["field2"], ys["amount"], ys["field3"], ys["field4"], ys["field5"], ys["field6"])
-            mes += str(js)
+            mes += str(int(js))
         else:
             mes = "策略不存在"
         message = await client.send_message(config.group, mes, parse_mode="markdown")
