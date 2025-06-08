@@ -161,17 +161,18 @@ async def zq_user(client, event):
             asyncio.create_task(delete_later(client, message.chat_id, message.id, 10))
         return
     if "js" == my[0]:
-        ys = query_records(str(my[1]))
+        ys = query_records(my[1])
         if ys is not None:
             mes = "累计需要资金："
-            js = calculate_losses(ys["field2"], ys["amount"],ys["field3"], ys["field4"],ys["field5"], ys["field6"])
-            mes+=js
+            js = calculate_losses(ys["field2"], ys["amount"], ys["field3"], ys["field4"], ys["field5"], ys["field6"])
+            mes += str(js)
         else:
             mes = "策略不存在"
         message = await client.send_message(config.group, mes, parse_mode="markdown")
         asyncio.create_task(delete_later(client, event.chat_id, event.id, 10))
         asyncio.create_task(delete_later(client, message.chat_id, message.id, 10))
         return
+
 
 async def zq_bet_on(client, event):
     await asyncio.sleep(5)
@@ -470,6 +471,8 @@ def calculate_losses(cycles, initial, rate1, rate2, rate3, rate4):
         current_bet = base_bet + additional
 
     return total
+
+
 def chase_next_trend(history):
     """
     追投
@@ -513,7 +516,7 @@ def calculate_bet_amount(win_count, lose_count, initial_amount, lose_stop, lose_
             return closest_multiple_of_500(initial_amount)
         if 0 < (win_count - 1) < variable.win:
             return closest_multiple_of_500(variable.bet_amount * 2)
-        if (win_count - 1)>= variable.win:
+        if (win_count - 1) >= variable.win:
             return variable.bet_amount
     else:
         if (lose_count + 1) > lose_stop:
