@@ -605,6 +605,7 @@ async def zq_settle(client, event):
                     variable.period_profit += (int(variable.bet_amount * 0.99))
                     variable.balance += (int(variable.bet_amount * 0.99))
                     variable.temporary_balance += (int(variable.bet_amount * 0.99))
+                    variable.temporary_a += (int(variable.bet_amount * 0.99))
                     variable.win_count += 1
                     variable.lose_count = 0
                     variable.status = 1
@@ -613,6 +614,7 @@ async def zq_settle(client, event):
                     variable.period_profit -= variable.bet_amount
                     variable.balance -= variable.bet_amount
                     variable.temporary_balance -= variable.bet_amount
+                    variable.temporary_a -= variable.bet_amount
                     variable.win_count = 0
                     variable.lose_count += 1
                     variable.status = 0
@@ -623,6 +625,7 @@ async def zq_settle(client, event):
                     variable.period_profit += (int(variable.bet_amount * 0.99))
                     variable.balance += (int(variable.bet_amount * 0.99))
                     variable.temporary_balance += (int(variable.bet_amount * 0.99))
+                    variable.temporary_a += (int(variable.bet_amount * 0.99))
                     variable.win_count += 1
                     variable.lose_count = 0
                     variable.status = 1
@@ -631,6 +634,7 @@ async def zq_settle(client, event):
                     variable.period_profit -= variable.bet_amount
                     variable.balance -= variable.bet_amount
                     variable.temporary_balance -= variable.bet_amount
+                    variable.temporary_a -= variable.bet_amount
                     variable.win_count = 0
                     variable.lose_count += 1
                     variable.status = 0
@@ -639,6 +643,12 @@ async def zq_settle(client, event):
                 if variable.lose_count >= 3:
                     variable.forecast_stop = False
                     variable.forecast_count = random.randint(1, 3)
+        # 达到初始投资 重置临时余额
+        if variable.temporary_a >= variable.temporary:
+            if variable.temporary_a_flag:
+                variable.temporary_balance = variable.temporary
+                variable.temporary_a_flag = False
+        # 自动根据临时余额切换押注策略
         if variable.auto:
             yss = query_records(type_id=None)
             for ys in yss:
@@ -668,11 +678,13 @@ async def zq_settle(client, event):
                     await client.send_message(config.group, mes, parse_mode="markdown")
                     variable.stop_count = variable.stop
                     variable.temporary_balance = variable.temporary
+                    variable.temporary_a_flag = True
                 elif variable.period_profit >= variable.profit:
                     mes = f"""**📈 本轮赢了一共赢得：{variable.period_profit} 灵石**"""
                     await client.send_message(config.group, mes, parse_mode="markdown")
                     variable.stop_count = variable.profit_stop
                     variable.temporary_balance = variable.temporary
+                    variable.temporary_a_flag = True
                 else:
                     variable.stop_count = variable.stop
             if variable.stop_count > 1:

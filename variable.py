@@ -10,6 +10,10 @@ proportion = 1
 
 temporary = 1000000
 
+temporary_a = 0
+
+temporary_a_flag = True
+
 win = 0
 
 # 开盘 开关
