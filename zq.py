@@ -482,8 +482,8 @@ def chase_next_trend(history):
     if history[-2] == history[-1]:
         return history[-1]
     else:
-        # if variable.lose_count == 2 or variable.lose_count == 3:
-        #     return history[-1]
+        if variable.lose_count == 2 or variable.lose_count == 3:
+            return history[-1]
         return history[-2]
 
 
