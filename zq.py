@@ -690,7 +690,7 @@ async def zq_settle(client, event):
                     variable.temporary_a = 0
                 else:
                     variable.stop_count = variable.stop
-            if variable.stop_count > 1:
+            if variable.stop_count > 0:
                 variable.stop_count -= 1
                 variable.bet_on = False
                 variable.mode_stop = False
