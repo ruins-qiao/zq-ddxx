@@ -37,6 +37,7 @@ async def zq_user(client, event):
             if len(my) > 3:
                 variable.temporary = int(my[3])
                 variable.temporary_balance = variable.temporary
+                variable.temporary_a = 0
             mes = f"""启动自动切换策略"""
             message = await client.send_message(config.group, mes, parse_mode="markdown")
             asyncio.create_task(delete_later(client, event.chat_id, event.id, 10))
@@ -679,12 +680,14 @@ async def zq_settle(client, event):
                     variable.stop_count = variable.stop
                     variable.temporary_balance = variable.temporary
                     variable.temporary_a_flag = True
+                    variable.temporary_a = 0
                 elif variable.period_profit >= variable.profit:
                     mes = f"""**📈 本轮赢了一共赢得：{variable.period_profit} 灵石**"""
                     await client.send_message(config.group, mes, parse_mode="markdown")
                     variable.stop_count = variable.profit_stop
                     variable.temporary_balance = variable.temporary
                     variable.temporary_a_flag = True
+                    variable.temporary_a = 0
                 else:
                     variable.stop_count = variable.stop
             if variable.stop_count > 1:
@@ -753,7 +756,7 @@ async def zq_settle(client, event):
         if variable.win_total > 0:
             mes += f"""🎯 **押注次数：{variable.total}\n🏆 胜率：{variable.win_total / variable.total * 100:.2f}%**\n"""
         mes += f"""💰 **收益：{variable.earnings}\n💰 临时余额：{variable.temporary_balance}\n💰 总余额：{variable.balance}**\n"""
-        if variable.stop_count > 1:
+        if variable.stop_count >= 1:
             mes += f"""\n\n还剩 {variable.stop_count} 局恢复押注"""
         if variable.bet:
             mess = f"""**📉 输赢统计： {"赢" if variable.status else "输"} {int(variable.bet_amount * 0.99) if variable.status else variable.bet_amount}\n🎲 结果： {event.pattern_match.group(2)}**"""
