@@ -37,7 +37,6 @@ async def zq_user(client, event):
             if len(my) > 3:
                 variable.temporary = int(my[3])
                 variable.temporary_balance = variable.temporary
-                variable.temporary_a = 0
             mes = f"""启动自动切换策略"""
             message = await client.send_message(config.group, mes, parse_mode="markdown")
             asyncio.create_task(delete_later(client, event.chat_id, event.id, 10))
@@ -108,7 +107,7 @@ async def zq_user(client, event):
             # 生成捐赠榜文本
             donation_list = f"```当前{config.name}个人总榜Top: {len(all_users)} 为\n"
             # 添加总榜 Top 5
-            for i, item in enumerate(all_users, start=1):
+            for i, item in enumerate(all_users[:20], start=1):
                 name = item['name']
                 count = item['count']
                 amount = item['amount']
@@ -183,17 +182,12 @@ async def zq_bet_on(client, event):
                                                                          variable.lose_twice,
                                                                          variable.lose_three,
                                                                          variable.lose_four)) >= 0:
-        if variable.bet_on or (
-                # variable.mode and variable.mode_stop and variable.forecast_stop) or (
-                # variable.mode == 2 and variable.mode_stop and variable.forecast_stop):
-                variable.mode and variable.mode_stop) or (
-                variable.mode == 2 and variable.mode_stop):
+        if variable.bet_on or (variable.mode and variable.mode_stop) or (variable.mode == 2 and variable.mode_stop):
             # 判断是否是开盘信息
             if event.reply_markup:
                 print(f"开始押注！")
                 # 获取压大还是小
                 if variable.mode == 1:
-                    # check = predict_next_bet(variable.i)
                     check = predict_next_bet_v5_7(variable.total)
                 elif variable.mode == 0:
                     check = predict_next_trend(variable.history)
@@ -231,12 +225,6 @@ async def zq_bet_on(client, event):
                         variable.lose_count = 0
         else:
             variable.bet = False
-            # if not variable.forecast_stop:
-            #     m = await client.send_message(config.user, f"连输短暂暂停还剩 {variable.forecast_count} 局")
-            #     asyncio.create_task(delete_later(client, m.chat_id, m.id, 60))
-            #     variable.forecast_count -= 1
-            #     if variable.forecast_count == 0:
-            #         variable.forecast_stop = True
     else:
         variable.bet = False
         variable.win_count = 0
@@ -606,7 +594,6 @@ async def zq_settle(client, event):
                     variable.period_profit += (int(variable.bet_amount * 0.99))
                     variable.balance += (int(variable.bet_amount * 0.99))
                     variable.temporary_balance += (int(variable.bet_amount * 0.99))
-                    variable.temporary_a += (int(variable.bet_amount * 0.99))
                     variable.win_count += 1
                     variable.lose_count = 0
                     variable.status = 1
@@ -615,7 +602,6 @@ async def zq_settle(client, event):
                     variable.period_profit -= variable.bet_amount
                     variable.balance -= variable.bet_amount
                     variable.temporary_balance -= variable.bet_amount
-                    variable.temporary_a -= variable.bet_amount
                     variable.win_count = 0
                     variable.lose_count += 1
                     variable.status = 0
@@ -626,7 +612,6 @@ async def zq_settle(client, event):
                     variable.period_profit += (int(variable.bet_amount * 0.99))
                     variable.balance += (int(variable.bet_amount * 0.99))
                     variable.temporary_balance += (int(variable.bet_amount * 0.99))
-                    variable.temporary_a += (int(variable.bet_amount * 0.99))
                     variable.win_count += 1
                     variable.lose_count = 0
                     variable.status = 1
@@ -635,7 +620,6 @@ async def zq_settle(client, event):
                     variable.period_profit -= variable.bet_amount
                     variable.balance -= variable.bet_amount
                     variable.temporary_balance -= variable.bet_amount
-                    variable.temporary_a -= variable.bet_amount
                     variable.win_count = 0
                     variable.lose_count += 1
                     variable.status = 0
@@ -644,11 +628,6 @@ async def zq_settle(client, event):
                 if variable.lose_count >= 3:
                     variable.forecast_stop = False
                     variable.forecast_count = random.randint(1, 3)
-        # 达到初始投资 重置临时余额
-        if variable.temporary_a >= variable.temporary:
-            if variable.temporary_a_flag:
-                variable.temporary_balance = variable.temporary
-                variable.temporary_a_flag = False
         # 自动根据临时余额切换押注策略
         if variable.auto:
             yss = query_records(type_id=None)
@@ -679,15 +658,11 @@ async def zq_settle(client, event):
                     await client.send_message(config.group, mes, parse_mode="markdown")
                     variable.stop_count = variable.stop
                     variable.temporary_balance = variable.temporary
-                    variable.temporary_a_flag = True
-                    variable.temporary_a = 0
                 elif variable.period_profit >= variable.profit:
                     mes = f"""**📈 本轮赢了一共赢得：{variable.period_profit} 灵石**"""
                     await client.send_message(config.group, mes, parse_mode="markdown")
                     variable.stop_count = variable.profit_stop
                     variable.temporary_balance = variable.temporary
-                    variable.temporary_a_flag = True
-                    variable.temporary_a = 0
                 else:
                     variable.stop_count = variable.stop
             if variable.stop_count > 0:
@@ -906,17 +881,18 @@ async def zq_shoot(client, event):
                 # 生成捐赠榜文本
                 donation_list = f"```感谢 {user_name} 大佬赏赐的: {format_number(int(amount))} 爱心\n"
                 donation_list += f"大佬您共赏赐了小弟: {user["count"]} 次,共计: {format_number(user["amount"])} 爱心\n"
-                donation_list += f"您是{config.name}个人打赏总榜的Top: {index + 1}\n\n"
-                donation_list += f"当前{config.name}个人总榜Top: 5 为\n"
-                # 添加总榜 Top 5
-                for i, item in enumerate(all_users[:5], start=1):
-                    name = item['name']
-                    count = item['count']
-                    am = item['amount']
-                    donation_list += f"     总榜Top {i}: {mask_if_less(int(amount), config.top, name)} 大佬共赏赐小弟: {mask_if_less(int(amount), config.top, count)} 次,共计: {mask_if_less(int(amount), config.top, format_number(int(am)))} 爱心\n"
-                donation_list += f"\n单次打赏>={format_number(config.top)}魔力查看打赏榜，感谢大佬，并期待您的下次打赏\n"
-                donation_list += f"小弟给大佬您共孝敬了: {user["neg_count"]} 次,共计: {format_number(user["neg_amount"])} 爱心"
-                donation_list += f"\n二狗哥出品，必属精品```"
+                # donation_list += f"您是{config.name}个人打赏总榜的Top: {index + 1}\n\n"
+                # donation_list += f"当前{config.name}个人总榜Top: 5 为\n"
+                # # 添加总榜 Top 5
+                # for i, item in enumerate(all_users[:5], start=1):
+                #     name = item['name']
+                #     count = item['count']
+                #     am = item['amount']
+                #     donation_list += f"     总榜Top {i}: {mask_if_less(int(amount), config.top, name)} 大佬共赏赐小弟: {mask_if_less(int(amount), config.top, count)} 次,共计: {mask_if_less(int(amount), config.top, format_number(int(am)))} 爱心\n"
+                # donation_list += f"\n单次打赏>={format_number(config.top)}魔力查看打赏榜，感谢大佬，并期待您的下次打赏\n"
+                # donation_list += f"小弟给大佬您共孝敬了: {user["neg_count"]} 次,共计: {format_number(user["neg_amount"])} 爱心"
+                # donation_list += f"\n二狗哥出品，必属精品```"
+                donation_list += f"```"
                 ms = await client.send_message(event.chat_id, donation_list, reply_to=message1.id)
                 await asyncio.sleep(30)
                 await ms.delete()
