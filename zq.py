@@ -15,7 +15,7 @@ async def zq_user(client, event):
     # Help 命令
     if "h" == my[0]:
         help_message = """```使用方法：\n
-- st - 启动命令 (st ys_name ) 设置参数 auto或名称 临时余额占比0-1 临时余额 \n
+- st - 启动命令 (st ys_name ) 设置参数 auto或名称 临时余额占比0-1 临时余额 追投几局反6,7\n
 - res - 重置统计数据 (res)\n
 - set - 设置参数：被炸几次触发、赢利多少触发、炸停止多久、盈利停止多久、手动恢复对局设置为“1” (set 5 1000000 3 5 1)\n
 - ms - 切换模式：0反投,1预测,2追投 (ms 1) 设置参数 模式 赢时翻倍局数\n
@@ -37,6 +37,9 @@ async def zq_user(client, event):
             if len(my) > 3:
                 variable.temporary = int(my[3])
                 variable.temporary_balance = variable.temporary
+            if len(my) > 5:
+                variable.lose_count_rate[0] = int(my[4])
+                variable.lose_count_rate[1] = int(my[5])
             mes = f"""启动自动切换策略"""
             message = await client.send_message(config.group, mes, parse_mode="markdown")
             asyncio.create_task(delete_later(client, event.chat_id, event.id, 10))
@@ -471,7 +474,7 @@ def chase_next_trend(history):
     if history[-2] == history[-1]:
         return history[-1]
     else:
-        if variable.lose_count == 2 or variable.lose_count == 3:
+        if variable.lose_count == variable.lose_count_rate[0] or variable.lose_count == variable.lose_count_rate[1]:
             return history[-1]
         return history[-2]
 

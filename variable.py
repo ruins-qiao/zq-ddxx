@@ -89,6 +89,8 @@ balance = 1000000
 # 余额
 temporary_balance = 1000000
 
+lose_count_rate = [6,7]
+
 # 记录押注金额
 bet_amount = 0
 
