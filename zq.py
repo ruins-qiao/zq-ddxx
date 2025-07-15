@@ -484,10 +484,9 @@ def z_next_trend(history):
     """
     if len(history) < 1:
         return random.choice([0, 1])
-    if history[-3] == history[-1] and history[-2] != history[-1]:
+    if variable.lose_count == variable.lose_count_rate[0]:
         return history[-2]
-    else:
-        return history[-1]
+    return history[-1]
 
 
 def predict_next_trend(history):
