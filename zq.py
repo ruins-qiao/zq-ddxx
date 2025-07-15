@@ -18,7 +18,7 @@ async def zq_user(client, event):
 - st - 启动命令 (st ys_name ) 设置参数 auto或名称 临时余额占比0-1 临时余额 追投几局反6,7\n
 - res - 重置统计数据 (res)\n
 - set - 设置参数：被炸几次触发、赢利多少触发、炸停止多久、盈利停止多久、手动恢复对局设置为“1” (set 5 1000000 3 5 1)\n
-- ms - 切换模式：0反投,1预测,2追投 (ms 1) 设置参数 模式 赢时翻倍局数\n
+- ms - 切换模式：0指定反投,1连反,2连追 (ms 1) 设置参数 模式 赢时翻倍局数\n
 - xx - 删除群组消息 (xx)\n
 - top - 显示捐赠排行榜 (top)\n
 - ys - 保存预设策略 (ys yc 30 3 3.0 3.0 3.0 3.0 10000)\n
@@ -191,11 +191,11 @@ async def zq_bet_on(client, event):
                 print(f"开始押注！")
                 # 获取压大还是小
                 if variable.mode == 1:
-                    check = predict_next_bet_v5_7(variable.total)
+                    check = f_next_trend(variable.history)
                 elif variable.mode == 0:
                     check = predict_next_trend(variable.history)
                 else:
-                    check = chase_next_trend(variable.history)
+                    check = z_next_trend(variable.history)
                 print(f"本次押注：{check}")
                 variable.i += 1
                 # 获取押注金额 根据连胜局数和底价进行计算
@@ -465,9 +465,9 @@ def calculate_losses(cycles, initial, rate1, rate2, rate3, rate4):
     return total
 
 
-def chase_next_trend(history):
+def f_next_trend(history):
     """
-    追投
+    反投
     """
     if len(history) < 1:
         return random.choice([0, 1])
@@ -477,6 +477,17 @@ def chase_next_trend(history):
         if variable.lose_count == variable.lose_count_rate[0] or variable.lose_count == variable.lose_count_rate[1]:
             return history[-1]
         return history[-2]
+
+def z_next_trend(history):
+    """
+    追投
+    """
+    if len(history) < 1:
+        return random.choice([0, 1])
+    if history[-3] == history[-1] and history[-2] != history[-1]:
+        return history[-2]
+    else:
+        return history[-1]
 
 
 def predict_next_trend(history):
