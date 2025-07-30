@@ -465,8 +465,6 @@ def calculate_losses(cycles, initial, rate1, rate2, rate3, rate4):
     return total
 
 
-100111000
-
 
 def f_next_trend(history):
     """
