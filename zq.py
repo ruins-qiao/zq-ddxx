@@ -465,18 +465,34 @@ def calculate_losses(cycles, initial, rate1, rate2, rate3, rate4):
     return total
 
 
+100111000
+
+
 def f_next_trend(history):
     """
     反投
     """
+    # if len(history) < 1:
+    #     return random.choice([0, 1])
+    # if history[-2] == history[-1]:
+    #     return history[-1]
+    # else:
+    #     if variable.lose_count == variable.lose_count_rate[0] or variable.lose_count == variable.lose_count_rate[1]:
+    #         return history[-1]
+    #     return history[-2]
+
     if len(history) < 1:
         return random.choice([0, 1])
-    if history[-2] == history[-1]:
+    if history[-2] == history[-1] and history[-3] == history[-2]:
         return history[-1]
     else:
         if variable.lose_count == variable.lose_count_rate[0] or variable.lose_count == variable.lose_count_rate[1]:
             return history[-1]
-        return history[-2]
+        if history[-1] == 0:
+            return 1
+        else:
+            return 0
+
 
 def z_next_trend(history):
     """
