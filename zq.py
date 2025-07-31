@@ -610,6 +610,10 @@ async def zq_settle(client, event):
             variable.win_times = 0
             variable.lose_times += 1
             variable.history.append(1 if event.pattern_match.group(2) == variable.consequence else 0)
+        # 存储输赢历史记录
+        if len(variable.lose_history) >= 1000:
+            del variable.history[:5]
+
         # 统计连大连小次数
         whether_bet_on(variable.win_times, variable.lose_times)
 
@@ -624,6 +628,7 @@ async def zq_settle(client, event):
                     variable.win_count += 1
                     variable.lose_count = 0
                     variable.status = 1
+                    variable.lose_history.append(1)
                 else:
                     variable.earnings -= variable.bet_amount
                     variable.period_profit -= variable.bet_amount
@@ -632,6 +637,7 @@ async def zq_settle(client, event):
                     variable.win_count = 0
                     variable.lose_count += 1
                     variable.status = 0
+                    variable.lose_history.append(0)
             else:
                 if variable.bet_type == 0:
                     variable.win_total += 1
@@ -642,6 +648,7 @@ async def zq_settle(client, event):
                     variable.win_count += 1
                     variable.lose_count = 0
                     variable.status = 1
+                    variable.lose_history.append(1)
                 else:
                     variable.earnings -= variable.bet_amount
                     variable.period_profit -= variable.bet_amount
@@ -650,6 +657,8 @@ async def zq_settle(client, event):
                     variable.win_count = 0
                     variable.lose_count += 1
                     variable.status = 0
+                    variable.lose_history.append(0)
+
             add(variable.win_rate, variable.status)
             if variable.mode == 1 or variable.mode == 2:
                 if variable.lose_count >= 3:
@@ -715,6 +724,8 @@ async def zq_settle(client, event):
                     await variable.message1.delete()
                 if variable.message3 is not None:
                     await variable.message3.delete()
+                if variable.message4 is not None:
+                    await variable.message4.delete()
                 result_counts = count_consecutive(variable.history)
                 # 创建消息
                 mes = f"""
@@ -735,6 +746,8 @@ async def zq_settle(client, event):
 {format_counts(result_counts["大"], "大")}
                  """
                 variable.message3 = await client.send_message(config.group, mes, parse_mode="markdown")
+                result_mes = count_sequences(variable.lose_history)
+                variable.message4 = await client.send_message(config.group, result_mes, parse_mode="markdown")
         if variable.message is not None:
             await variable.message.delete()
         reversed_data = ["✅" if x == 1 else "❌" for x in variable.history[-40::][::-1]]  # 倒序列表
@@ -815,7 +828,53 @@ def whether_bet_on(win_times, lose_times):
             variable.win_count = 0
             variable.lose_count = 0
 
+def count_sequences(records):
+    # 初始化统计字典
+    loss_counts = {}
+    win_counts = {}
 
+    # 边界处理：空记录
+    if not records:
+        print("🔴 连“输”结果：\n🟢 连“赢”结果：")
+        return
+
+    # 初始化计数变量
+    current = records[0]
+    count = 1
+
+    # 遍历记录序列
+    for i in range(1, len(records)):
+        if records[i] == current:
+            count += 1
+        else:
+            # 根据当前状态更新对应字典
+            if current == 0:
+                loss_counts[count] = loss_counts.get(count, 0) + 1
+            else:
+                win_counts[count] = win_counts.get(count, 0) + 1
+            current = records[i]
+            count = 1
+
+    # 处理最后一组连续记录
+    if current == 0:
+        loss_counts[count] = loss_counts.get(count, 0) + 1
+    else:
+        win_counts[count] = win_counts.get(count, 0) + 1
+
+    # 按连续次数降序排序
+    sorted_loss = sorted(loss_counts.items(), key=lambda x: x[0], reverse=True)
+    sorted_win = sorted(win_counts.items(), key=lambda x: x[0], reverse=True)
+
+    # 格式化输出结果
+    output = "🔴 连“输”结果：\n"
+    for length, times in sorted_loss:
+        output += f"{length} 连“输” : {times} 次\n"
+
+    output += "🟢 连“赢”结果：\n"
+    for length, times in sorted_win:
+        output += f"{length} 连“赢” : {times} 次\n"
+
+    return output.rstrip()
 def count_consecutive(data):
     """统计连续出现的次数"""
     counts = {"大": defaultdict(int), "小": defaultdict(int)}

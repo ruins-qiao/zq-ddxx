@@ -22,6 +22,9 @@ open_ydx = False
 # 历史记录
 history = []
 
+# 输赢历史记录
+lose_history = []
+
 # 押注模式  0 = 反投 1 = 预测 2 = 追投
 mode= 0
 
@@ -67,6 +70,7 @@ message = None
 message1 = None
 message2 = None
 message3 = None
+message4 = None
 
 # 记录押注大小
 bet_type = 0
