@@ -860,7 +860,7 @@ def count_sequences(records):
     # 处理最后一组连续记录
     if current == 0:
         loss_counts[count] = loss_counts.get(count, 0) + 1
-    else:
+    elif current == 1:
         win_counts[count] = win_counts.get(count, 0) + 1
 
     # 按连续次数降序排序
