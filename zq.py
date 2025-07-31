@@ -664,6 +664,8 @@ async def zq_settle(client, event):
                 if variable.lose_count >= 3:
                     variable.forecast_stop = False
                     variable.forecast_count = random.randint(1, 3)
+        else:
+            variable.lose_history.append(3)
         # 自动根据临时余额切换押注策略
         if variable.auto:
             yss = query_records(type_id=None)
@@ -835,7 +837,7 @@ def count_sequences(records):
 
     # 边界处理：空记录
     if not records:
-        print("🔴 连“输”结果：\n🟢 连“赢”结果：")
+        print("**🔴 连“输”结果：\n🟢 连“赢”结果：**")
         return
 
     # 初始化计数变量
@@ -850,7 +852,7 @@ def count_sequences(records):
             # 根据当前状态更新对应字典
             if current == 0:
                 loss_counts[count] = loss_counts.get(count, 0) + 1
-            else:
+            elif current == 1:
                 win_counts[count] = win_counts.get(count, 0) + 1
             current = records[i]
             count = 1
@@ -866,15 +868,16 @@ def count_sequences(records):
     sorted_win = sorted(win_counts.items(), key=lambda x: x[0], reverse=True)
 
     # 格式化输出结果
-    output = "🔴 连“输”结果：\n"
+    output = "🔴 **连“输”结果：**\n"
     for length, times in sorted_loss:
         output += f"{length} 连“输” : {times} 次\n"
 
-    output += "🟢 连“赢”结果：\n"
+    output += "🟢 **连“赢”结果：**\n"
     for length, times in sorted_win:
         output += f"{length} 连“赢” : {times} 次\n"
 
     return output.rstrip()
+
 def count_consecutive(data):
     """统计连续出现的次数"""
     counts = {"大": defaultdict(int), "小": defaultdict(int)}
