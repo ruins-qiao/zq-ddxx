@@ -752,7 +752,8 @@ async def zq_settle(client, event):
                 variable.message4 = await client.send_message(config.group, result_mes, parse_mode="markdown")
         if variable.message is not None:
             await variable.message.delete()
-        reversed_data = ["✅" if x == 1 else "❌" for x in variable.history[-160::][::-1]]  # 倒序列表
+        #reversed_data = ["✅" if x == 1 else "❌" for x in variable.history[-200::][::-1]]  # 倒序列表
+        reversed_data = variable.history[-200::][::-1]  # 倒序列表
         mes = f"""
         📊 **近期 40 次结果**（由近及远）\n✅：大（1）  ❌：小（0）\n{os.linesep.join(
             " ".join(map(str, reversed_data[i:i + 10]))
