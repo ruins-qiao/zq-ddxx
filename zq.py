@@ -481,7 +481,7 @@ def f_next_trend(history):
 
     if len(history) < 1:
         return random.choice([0, 1])
-    if history[-2] == history[-1] and history[-3] == history[-2]:
+    if history[-2] == history[-1] and history[-3] == history[-2] and history[-4] == history[-3]:
         return history[-1]
     else:
         if variable.lose_count == variable.lose_count_rate[0] or variable.lose_count == variable.lose_count_rate[1]:
@@ -612,7 +612,7 @@ async def zq_settle(client, event):
             variable.history.append(1 if event.pattern_match.group(2) == variable.consequence else 0)
         # 存储输赢历史记录
         if len(variable.lose_history) >= 1000:
-            del variable.history[:5]
+            del variable.lose_history[:5]
 
         # 统计连大连小次数
         whether_bet_on(variable.win_times, variable.lose_times)
@@ -752,7 +752,7 @@ async def zq_settle(client, event):
                 variable.message4 = await client.send_message(config.group, result_mes, parse_mode="markdown")
         if variable.message is not None:
             await variable.message.delete()
-        reversed_data = ["✅" if x == 1 else "❌" for x in variable.history[-40::][::-1]]  # 倒序列表
+        reversed_data = ["✅" if x == 1 else "❌" for x in variable.history[-160::][::-1]]  # 倒序列表
         mes = f"""
         📊 **近期 40 次结果**（由近及远）\n✅：大（1）  ❌：小（0）\n{os.linesep.join(
             " ".join(map(str, reversed_data[i:i + 10]))
