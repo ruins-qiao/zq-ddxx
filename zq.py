@@ -599,6 +599,7 @@ async def zq_settle(client, event):
         print(f"{event.pattern_match.group(2)}")
         if variable.open_ydx:
             await client.send_message(-1002262543959, '/ydx')
+
         # 存储历史记录
         if len(variable.history) >= 1000:
             del variable.history[:5]
@@ -606,10 +607,22 @@ async def zq_settle(client, event):
             variable.win_times += 1
             variable.lose_times = 0
             variable.history.append(1 if event.pattern_match.group(2) == variable.consequence else 0)
+            variable.a_history.append(1 if event.pattern_match.group(2) == variable.consequence else 0)
         else:
             variable.win_times = 0
             variable.lose_times += 1
             variable.history.append(1 if event.pattern_match.group(2) == variable.consequence else 0)
+            variable.a_history.append(1 if event.pattern_match.group(2) == variable.consequence else 0)
+
+        if len(variable.a_history) >= 1000:
+            r = variable.a_history[-1000::][::-1]
+            mes = f"""
+📊 **近期 1000 次结果**（由近及远）\n大（1）  小（0）\n{os.linesep.join(
+                    " ".join(map(str, r[i:i + 20]))
+                    for i in range(0, len(r), 20)
+                )}"""
+            await client.send_message(config.group, mes, parse_mode="markdown")
+            variable.a_history.clear()
         # 存储输赢历史记录
         if len(variable.lose_history) >= 1000:
             del variable.lose_history[:5]

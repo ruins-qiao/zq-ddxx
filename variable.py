@@ -25,6 +25,9 @@ history = []
 # 输赢历史记录
 lose_history = []
 
+# 输赢历史记录
+a_history = []
+
 # 押注模式  0 = 反投 1 = 预测 2 = 追投
 mode= 0
 
