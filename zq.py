@@ -470,26 +470,26 @@ def f_next_trend(history):
     """
     反投
     """
-    # if len(history) < 1:
-    #     return random.choice([0, 1])
-    # if history[-2] == history[-1]:
-    #     return history[-1]
-    # else:
-    #     if variable.lose_count == variable.lose_count_rate[0] or variable.lose_count == variable.lose_count_rate[1]:
-    #         return history[-1]
-    #     return history[-2]
-
     if len(history) < 1:
         return random.choice([0, 1])
-    if history[-2] == history[-1] and history[-3] == history[-2] and history[-4] == history[-3]:
+    if history[-2] == history[-1]:
         return history[-1]
     else:
         if variable.lose_count == variable.lose_count_rate[0] or variable.lose_count == variable.lose_count_rate[1]:
             return history[-1]
-        if history[-1] == 0:
-            return 1
-        else:
-            return 0
+        return history[-2]
+
+    # if len(history) < 1:
+    #     return random.choice([0, 1])
+    # if history[-2] == history[-1] and history[-3] == history[-2] and history[-4] == history[-3]:
+    #     return history[-1]
+    # else:
+    #     if variable.lose_count == variable.lose_count_rate[0] or variable.lose_count == variable.lose_count_rate[1]:
+    #         return history[-1]
+    #     if history[-1] == 0:
+    #         return 1
+    #     else:
+    #         return 0
 
 
 def z_next_trend(history):
@@ -769,8 +769,8 @@ async def zq_settle(client, event):
         reversed_data = variable.history[-200::][::-1]  # 倒序列表
         mes = f"""
         📊 **近期 40 次结果**（由近及远）\n✅：大（1）  ❌：小（0）\n{os.linesep.join(
-            " ".join(map(str, reversed_data[i:i + 10]))
-            for i in range(0, len(reversed_data), 10)
+            " ".join(map(str, reversed_data[i:i + 15]))
+            for i in range(0, len(reversed_data), 15)
         )}\n\n———————————————\n🎯 **策略设定**\n"""
         if variable.mode == 0:
             mes += f"""🎰 **押注模式 反投**\n🔄 **{variable.continuous} 连反压**\n"""
