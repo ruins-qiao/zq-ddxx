@@ -465,20 +465,27 @@ def calculate_losses(cycles, initial, rate1, rate2, rate3, rate4):
     return total
 
 
-
 def f_next_trend(history):
     """
     反投
     """
+    # if len(history) < 1:
+    #     return random.choice([0, 1])
+    # if history[-2] == history[-1]:
+    #     return history[-1]
+    # else:
+    #     if variable.lose_count == variable.lose_count_rate[0] or variable.lose_count == variable.lose_count_rate[1]:
+    #         return history[-1]
+    #     return history[-2]
     if len(history) < 1:
         return random.choice([0, 1])
-    if history[-2] == history[-1]:
+    if variable.lose_count > 0:
         return history[-1]
     else:
-        if variable.lose_count == variable.lose_count_rate[0] or variable.lose_count == variable.lose_count_rate[1]:
-            return history[-1]
-        return history[-2]
-
+        if history[-1] == 0:
+            return 1
+        else:
+            return 0
     # if len(history) < 1:
     #     return random.choice([0, 1])
     # if history[-2] == history[-1] and history[-3] == history[-2] and history[-4] == history[-3]:
@@ -615,12 +622,11 @@ async def zq_settle(client, event):
             variable.a_history.append(1 if event.pattern_match.group(2) == variable.consequence else 0)
 
         if len(variable.a_history) >= 1000:
-            r = variable.a_history[-1000::][::-1]
             mes = f"""
-📊 **近期 1000 次结果**（由近及远）\n大（1）  小（0）\n{os.linesep.join(
-                    " ".join(map(str, r[i:i + 20]))
-                    for i in range(0, len(r), 20)
-                )}"""
+📊 **近期 1000 次连输连赢次数\n{os.linesep.join(
+                " ".join(map(str, variable.a_history[i:i + 20]))
+                for i in range(0, len(variable.a_history), 20)
+            )}"""
             await client.send_message(config.group, mes, parse_mode="markdown")
             variable.a_history.clear()
         # 存储输赢历史记录
@@ -844,6 +850,7 @@ def whether_bet_on(win_times, lose_times):
             variable.win_count = 0
             variable.lose_count = 0
 
+
 def count_sequences(records):
     # 初始化统计字典
     loss_counts = {}
@@ -891,6 +898,7 @@ def count_sequences(records):
         output += f"{length} 连“赢” : {times} 次\n"
 
     return output.rstrip()
+
 
 def count_consecutive(data):
     """统计连续出现的次数"""
