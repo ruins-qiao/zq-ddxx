@@ -479,7 +479,7 @@ def f_next_trend(history):
     #     return history[-2]
     if len(history) < 1:
         return random.choice([0, 1])
-    if variable.lose_count > 0:
+    if variable.lose_count == variable.lose_count_rate[0] or variable.lose_count == variable.lose_count_rate[1]:
         return history[-1]
     else:
         if history[-1] == 0:
