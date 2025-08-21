@@ -511,7 +511,8 @@ def z_next_trend(history):
 
 
 def predict_next_trend(history):
-    return 0 if history[-1] else 1
+    # return 0 if history[-1] else 1
+    return history[-1]
 
 
 def predict_next_trend1(history):
