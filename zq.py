@@ -6,8 +6,6 @@ from collections import defaultdict
 import asyncio
 import re
 import os
-import random
-import numpy as np
 
 
 async def zq_user(client, event):
@@ -15,7 +13,7 @@ async def zq_user(client, event):
     # Help 命令
     if "h" == my[0]:
         help_message = """```使用方法：\n
-- st - 启动命令 (st ys_name ) 设置参数 auto或名称 临时余额占比0-1 临时余额 追投几局反6,7\n
+- st - 启动命令 (st ys_name ) \n
 - res - 重置统计数据 (res)\n
 - set - 设置参数：被炸几次触发、赢利多少触发、炸停止多久、盈利停止多久、手动恢复对局设置为“1” (set 5 1000000 3 5 1)\n
 - ms - 切换模式：0指定反投,1连反,2连追 (ms 1) 设置参数 模式 赢时翻倍局数\n
@@ -30,36 +28,19 @@ async def zq_user(client, event):
         asyncio.create_task(delete_later(client, message.chat_id, message.id, 60))
         return
     if "st" == my[0]:
-        if my[1] == "auto":
-            variable.auto = True
-            if len(my) > 2:
-                variable.proportion = float(my[2])
-            if len(my) > 3:
-                variable.temporary = int(my[3])
-                variable.temporary_balance = variable.temporary
-            if len(my) > 5:
-                variable.lose_count_rate[0] = int(my[4])
-                variable.lose_count_rate[1] = int(my[5])
-            mes = f"""启动自动切换策略"""
-            message = await client.send_message(config.group, mes, parse_mode="markdown")
-            asyncio.create_task(delete_later(client, event.chat_id, event.id, 10))
-            asyncio.create_task(delete_later(client, message.chat_id, message.id, 10))
-            return
-        else:
-            variable.auto = False
-            yss = query_records(my[1])
-            variable.continuous = yss["count"]
-            variable.lose_stop = yss["field2"]
-            variable.lose_once = yss["field3"]
-            variable.lose_twice = yss["field4"]
-            variable.lose_three = yss["field5"]
-            variable.lose_four = yss["field6"]
-            variable.initial_amount = yss["amount"]
-            mes = f"""启动 {yss["type"]}"""
-            message = await client.send_message(config.group, mes, parse_mode="markdown")
-            asyncio.create_task(delete_later(client, event.chat_id, event.id, 10))
-            asyncio.create_task(delete_later(client, message.chat_id, message.id, 10))
-            return
+        yss = query_records(my[1])
+        variable.continuous = yss["count"]
+        variable.lose_stop = yss["field2"]
+        variable.lose_once = yss["field3"]
+        variable.lose_twice = yss["field4"]
+        variable.lose_three = yss["field5"]
+        variable.lose_four = yss["field6"]
+        variable.initial_amount = yss["amount"]
+        mes = f"""启动 {yss["type"]}"""
+        message = await client.send_message(config.group, mes, parse_mode="markdown")
+        asyncio.create_task(delete_later(client, event.chat_id, event.id, 10))
+        asyncio.create_task(delete_later(client, message.chat_id, message.id, 10))
+        return
     if "res" == my[0]:
         variable.win_total = 0
         variable.total = 0
@@ -83,8 +64,6 @@ async def zq_user(client, event):
         return
     if "ms" == my[0]:
         variable.mode = int(my[1])
-        if len(my) > 2:
-            variable.win = int(my[2])
         mes = f"""设置成功"""
         message = await client.send_message(config.group, mes, parse_mode="markdown")
         asyncio.create_task(delete_later(client, event.chat_id, event.id, 10))
@@ -185,13 +164,13 @@ async def zq_bet_on(client, event):
                                                                          variable.lose_twice,
                                                                          variable.lose_three,
                                                                          variable.lose_four)) >= 0:
-        if variable.bet_on or (variable.mode and variable.mode_stop) or (variable.mode == 2 and variable.mode_stop):
+        if variable.bet_on or variable.mode ==1 :
             # 判断是否是开盘信息
             if event.reply_markup:
                 print(f"开始押注！")
                 # 获取压大还是小
                 if variable.mode == 1:
-                    check = f_next_trend(variable.history)
+                    check = z_next_trend(variable.history)
                 elif variable.mode == 0:
                     check = predict_next_trend(variable.history)
                 else:
@@ -253,193 +232,6 @@ async def fetch_account_balance():
         return variable.balance
 
 
-def predict_next_combined_trend(history):
-    """
-    长短期趋势结合 获取押注大小
-    """
-    if len(history) < 10:
-        return random.choice([0, 1])
-
-    short_term = sum(history[-3:])
-    long_term = sum(history[-10:])
-    if short_term >= 2 and long_term >= 6:
-        return 1
-    elif short_term <= 1 and long_term <= 4:
-        return 0
-    else:
-        return random.choice([0, 1])
-
-
-def five_consecutive(history):
-    """
-    计算最近五局是否五连
-    """
-    total = 0
-    var = history[-4::]
-    for i in var:
-        total += i
-    if total == 4 or total == 0:
-        return True
-    else:
-        return False
-
-
-# V5.7 新增辅助函数
-def ewma_weights(window_size, alpha=0.3):
-    """
-    生成动态窗口权重（指数加权移动平均）
-    :param window_size: 窗口大小
-    :param alpha: 平滑因子，控制近期数据权重，范围 (0, 1)，默认 0.3
-    :return: 标准化后的权重数组
-    """
-    weights = [(1 - alpha) ** i for i in range(window_size)]
-    weights.reverse()  # 确保近期数据权重更高
-    return np.array(weights) / sum(weights)
-
-
-def calculate_correction_factor(history, recent_predictions, window=5):
-    """
-    计算自适应偏差修正系数
-    :param history: 历史结果列表 (0 或 1)
-    :param recent_predictions: 近期预测列表 (0 或 1)
-    :param window: 计算窗口大小，默认为 5
-    :return: 修正系数
-    """
-    if len(history) < window or len(recent_predictions) < window:
-        return 0  # 数据不足，不修正
-    recent_history = history[-window:]
-    recent_preds = recent_predictions[-window:]
-    mismatches = sum(1 for actual, pred in zip(recent_history, recent_preds) if actual != pred)
-    correction = (mismatches / window) * 0.2  # 偏差比例 * 调节因子 (0.2)
-    return correction
-
-
-def calculate_volatility(history):
-    if len(history) < 10:
-        return 0.5
-    recent = history[-10:]
-    transitions = sum(1 for i in range(1, len(recent)) if recent[i] != recent[i - 1])
-    return transitions / (len(recent) - 1)
-
-
-def analyze_long_pattern(history):
-    last_40 = history[-40:] if len(history) >= 40 else history
-    two_consecutive_0 = sum(1 for i in range(len(last_40) - 1) if last_40[i:i + 2] == [0, 0])
-    two_consecutive_1 = sum(1 for i in range(len(last_40) - 1) if last_40[i:i + 2] == [1, 1])
-    three_consecutive_0 = sum(1 for i in range(len(last_40) - 2) if last_40[i:i + 3] == [0, 0, 0])
-    three_consecutive_1 = sum(1 for i in range(len(last_40) - 2) if last_40[i:i + 3] == [1, 1, 1])
-    total_long = two_consecutive_0 + two_consecutive_1 + 2 * (three_consecutive_0 + three_consecutive_1)
-    total = len(last_40) - 1
-    return total_long / total > 0.3
-
-
-def predict_next_bet_v5_7(current_round: int) -> int:
-    """V5.7 预测算法 - 微调版"""
-    if not variable.history:
-        return random.randint(0, 1)
-
-    # 计算波动率并动态选择窗口，阈值从 0.3/0.5 改为 0.4/0.6
-    # - 原因：放宽窗口切换条件（0.4 > 0.3），倾向于使用更大窗口（15），更有利于捕捉长趋势
-    volatility = calculate_volatility(variable.history)
-    window = 15 if volatility < 0.4 else 10 if volatility < 0.6 else 5
-    recent = variable.history[-window:] if len(variable.history) >= window else variable.history
-
-    # 计算加权模式
-    weights = ewma_weights(window, alpha=0.5)  # alpha 已调整为 0.5
-    consecutive_weight = 0
-    alternation_weight = 0
-    for i in range(1, len(recent)):
-        if recent[i] == recent[i - 1]:
-            consecutive_weight += weights[i]
-        else:
-            alternation_weight += weights[i]
-    total_weight = sum(weights[1:])
-
-    # 计算胜率和动态阈值
-    win_rate = variable.win_count / (variable.win_count + variable.lose_count) if (
-                                                                                          variable.win_count + variable.lose_count) > 0 else 0.5
-    long_consecutive_threshold = 5 if win_rate < 0.4 else 4 if win_rate < 0.6 else 3
-
-    # 计算连续性
-    consecutive = 1
-    for i in range(len(recent) - 1, 0, -1):
-        if recent[i] == recent[i - 1]:
-            consecutive += weights[i]
-        else:
-            break
-
-    # 模式分类
-    if consecutive >= long_consecutive_threshold:
-        mode = "long_consecutive"
-        variable.last_predict_info = f"long_consecutive ({consecutive:.1f} 加权连续)"
-        prediction = recent[-1]
-    elif alternation_weight >= 0.8 * total_weight and len(recent) >= 4:  # 阈值从 0.7 改为 0.6
-        # - 原因：降低交替触发条件（0.6 < 0.7），倾向于识别交替模式，更有利于捕捉近期切换规律
-        mode = "alternate"
-        variable.last_predict_info = f"alternate (交替 {alternation_weight:.1f}/{total_weight:.1f})"
-        prediction = 1 - recent[-1]  # 交替预测相反结果
-    elif consecutive >= 1.5:  # 阈值从 2 改为 1.5
-        # - 原因：降低弱连续触发条件（1.5 < 2），倾向于识别短期连续，更有利于捕捉2-3连的规律
-        mode = "weak_consecutive"
-        variable.last_predict_info = f"weak_consecutive ({consecutive:.1f} 加权连续)"
-        prediction = recent[-1]
-    else:
-        mode = "random"
-        variable.last_predict_info = "random (无明显模式)"
-        prediction = random.randint(0, 1)
-        if analyze_long_pattern(variable.history):
-            prediction = 1  # 长模式偏向“大”
-
-    # 趋势强度判断与暂停机制，连输阈值从 3 改为 4
-    # - 原因：减少暂停频率（4 > 3），倾向于持续预测，更有利于在连输后捕捉反转规律
-    trend_strength = "strong" if mode == "long_consecutive" else "weak" if mode in ["weak_consecutive",
-                                                                                    "alternate"] else "none"
-    if trend_strength == "none" and variable.lose_count >= 4:
-        return -1  # 表示暂停
-
-    # 偏差修正
-    correction_factor = calculate_correction_factor(variable.history, variable.predictions)
-    if variable.lose_count >= 3 and random.random() < correction_factor:
-        prediction = 1 - prediction
-        variable.last_predict_info += f" [偏差修正]"
-
-    variable.predictions.append(prediction)
-    return prediction
-
-
-def predict_next_bet(current_round):
-    if len(variable.current_pattern) <= 0 or (current_round % 5 == 0):
-        variable.current_pattern = [random.randint(0, 1) for _ in range(3)]
-
-    # 计算下一局在当前序列中的位置
-    pattern_index = (current_round + 1) % 3
-    return variable.current_pattern[pattern_index]
-
-
-def calculate_ones_ratio(arr):
-    """
-    计算数组中1的占比
-
-    参数:
-        arr (list): 只包含0和1的数组
-
-    返回:
-        float: 1的占比（0到1之间的小数）
-    """
-    if not arr:  # 如果数组为空
-        return 0.0
-
-    count_ones = sum(arr)
-    total = len(arr)
-    return count_ones / total
-
-
-def add(self, value):
-    if len(self) >= 100:
-        self.pop(0)
-    self.append(value)
-
-
 def calculate_losses(cycles, initial, rate1, rate2, rate3, rate4):
     total = 0
     current_bet = initial
@@ -465,38 +257,6 @@ def calculate_losses(cycles, initial, rate1, rate2, rate3, rate4):
     return total
 
 
-def f_next_trend(history):
-    """
-    反投
-    """
-    # if len(history) < 1:
-    #     return random.choice([0, 1])
-    # if history[-2] == history[-1]:
-    #     return history[-1]
-    # else:
-    #     if variable.lose_count == variable.lose_count_rate[0] or variable.lose_count == variable.lose_count_rate[1]:
-    #         return history[-1]
-    #     return history[-2]
-    if len(history) < 1:
-        return random.choice([0, 1])
-    if variable.lose_count == variable.lose_count_rate[0] or variable.lose_count == variable.lose_count_rate[1]:
-        return history[-1]
-    else:
-        if history[-1] == 0:
-            return 1
-        else:
-            return 0
-    # if len(history) < 1:
-    #     return random.choice([0, 1])
-    # if history[-2] == history[-1] and history[-3] == history[-2] and history[-4] == history[-3]:
-    #     return history[-1]
-    # else:
-    #     if variable.lose_count == variable.lose_count_rate[0] or variable.lose_count == variable.lose_count_rate[1]:
-    #         return history[-1]
-    #     if history[-1] == 0:
-    #         return 1
-    #     else:
-    #         return 0
 
 
 def z_next_trend(history):
@@ -508,22 +268,6 @@ def z_next_trend(history):
 
 def predict_next_trend(history):
     return 0 if history[-1] else 1
-
-
-def predict_next_trend1(history):
-    # 统计1和0的数量
-    count_ones = sum(1 for x in history if x == 1)
-
-    # 计算1和0的占比
-    prob_one = count_ones / len(history) * 100
-
-    if prob_one >= 52.5:
-        return 0
-    if prob_one >= 51:
-        return 1
-    if prob_one >= 50:
-        return 0
-    return 1
 
 
 def calculate_bet_amount(win_count, lose_count, initial_amount, lose_stop, lose_once, lose_twice, lose_three,
@@ -598,11 +342,6 @@ async def bet(check, com, event):
 
 async def zq_settle(client, event):
     if event.pattern_match:
-        print(f"{event.pattern_match.group(1)}")
-        print(f"{event.pattern_match.group(2)}")
-        if variable.open_ydx:
-            await client.send_message(-1002262543959, '/ydx')
-
         # 存储历史记录
         if len(variable.history) >= 1000:
             del variable.history[:5]
@@ -639,7 +378,6 @@ async def zq_settle(client, event):
                     variable.earnings += (int(variable.bet_amount * 0.99))
                     variable.period_profit += (int(variable.bet_amount * 0.99))
                     variable.balance += (int(variable.bet_amount * 0.99))
-                    variable.temporary_balance += (int(variable.bet_amount * 0.99))
                     variable.win_count += 1
                     variable.lose_count = 0
                     variable.status = 1
@@ -648,7 +386,6 @@ async def zq_settle(client, event):
                     variable.earnings -= variable.bet_amount
                     variable.period_profit -= variable.bet_amount
                     variable.balance -= variable.bet_amount
-                    variable.temporary_balance -= variable.bet_amount
                     variable.win_count = 0
                     variable.lose_count += 1
                     variable.status = 0
@@ -659,7 +396,6 @@ async def zq_settle(client, event):
                     variable.earnings += (int(variable.bet_amount * 0.99))
                     variable.period_profit += (int(variable.bet_amount * 0.99))
                     variable.balance += (int(variable.bet_amount * 0.99))
-                    variable.temporary_balance += (int(variable.bet_amount * 0.99))
                     variable.win_count += 1
                     variable.lose_count = 0
                     variable.status = 1
@@ -668,41 +404,14 @@ async def zq_settle(client, event):
                     variable.earnings -= variable.bet_amount
                     variable.period_profit -= variable.bet_amount
                     variable.balance -= variable.bet_amount
-                    variable.temporary_balance -= variable.bet_amount
                     variable.win_count = 0
                     variable.lose_count += 1
                     variable.status = 0
                     variable.lose_history.append(0)
 
-            add(variable.win_rate, variable.status)
-            if variable.mode == 1 or variable.mode == 2:
-                if variable.lose_count >= 3:
-                    variable.forecast_stop = False
-                    variable.forecast_count = random.randint(1, 3)
         else:
             variable.lose_history.append(3)
-        # 自动根据临时余额切换押注策略
-        if variable.auto:
-            yss = query_records(type_id=None)
-            for ys in yss:
-                if (variable.temporary_balance * variable.proportion) >= calculate_losses(ys["field2"], ys["amount"],
-                                                                                          ys["field3"], ys["field4"],
-                                                                                          ys["field5"], ys["field6"]):
-                    if variable.initial_amount != ys["amount"]:
-                        variable.continuous = ys["count"]
-                        variable.lose_stop = ys["field2"]
-                        variable.lose_once = ys["field3"]
-                        variable.lose_twice = ys["field4"]
-                        variable.lose_three = ys["field5"]
-                        variable.lose_four = ys["field6"]
-                        variable.initial_amount = ys["amount"]
-                        mes = f"""启动 {ys["type"]}"""
-                        message = await client.send_message(config.group, mes, parse_mode="markdown")
-                        asyncio.create_task(delete_later(client, event.chat_id, event.id, 10))
-                        asyncio.create_task(delete_later(client, message.chat_id, message.id, 10))
-                        break
-                    else:
-                        break
+
         if variable.explode_count >= variable.explode or variable.period_profit >= variable.profit:
             if variable.flag:
                 variable.flag = False
@@ -710,12 +419,10 @@ async def zq_settle(client, event):
                     mes = f"""**💥 本轮炸了收益如下：{variable.period_profit} 灵石**\n"""
                     await client.send_message(config.group, mes, parse_mode="markdown")
                     variable.stop_count = variable.stop
-                    variable.temporary_balance = variable.temporary
                 elif variable.period_profit >= variable.profit:
                     mes = f"""**📈 本轮赢了一共赢得：{variable.period_profit} 灵石**"""
                     await client.send_message(config.group, mes, parse_mode="markdown")
                     variable.stop_count = variable.profit_stop
-                    variable.temporary_balance = variable.temporary
                 else:
                     variable.stop_count = variable.stop
             if variable.stop_count > 0:
@@ -788,7 +495,7 @@ async def zq_settle(client, event):
         mes += f"""📈 **赢二倍局数 {variable.win}**\n\n"""
         if variable.win_total > 0:
             mes += f"""🎯 **押注次数：{variable.total}\n🏆 胜率：{variable.win_total / variable.total * 100:.2f}%**\n"""
-        mes += f"""💰 **收益：{variable.earnings}\n💰 临时余额：{variable.temporary_balance}\n💰 总余额：{variable.balance}**\n"""
+        mes += f"""💰 **收益：{variable.earnings}\n💰 总余额：{variable.balance}**\n"""
         if variable.stop_count >= 1:
             mes += f"""\n\n还剩 {variable.stop_count} 局恢复押注"""
         if variable.bet:

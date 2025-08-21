@@ -3,21 +3,7 @@ consequence = "大"
 # 总开关
 switch = True
 
-# 自动切换押注策略 根据总余额来切换占比切换 总余额*0.33 > 炸一轮的总金额 就切换到此策略
-auto = False
-# 自动切换押注策略 根据总余额占比
-proportion = 1
-
-temporary = 1000000
-
-temporary_a = 0
-
-temporary_a_flag = True
-
 win = 0
-
-# 开盘 开关
-open_ydx = False
 
 # 历史记录
 history = []
@@ -59,12 +45,7 @@ mark = True
 flag = True
 # 暂停开关
 mode_stop = True
-# 预测短期暂停开关
-forecast_stop = True
-# 预测短期暂停次数
-forecast_count = 0
-# 序列
-current_pattern = []
+
 
 i = 1
 
@@ -84,8 +65,6 @@ total = 0
 # 记录m1胜利局数
 win_total = 0
 
-# 记录最近100局胜负情况
-win_rate = []
 
 # 初始金额
 initial_amount = 500
@@ -93,10 +72,6 @@ initial_amount = 500
 # 余额
 balance = 1000000
 
-# 余额
-temporary_balance = 1000000
-
-lose_count_rate = [6,7]
 
 # 记录押注金额
 bet_amount = 0
@@ -145,8 +120,3 @@ small_button = {500: 14, 2000: 12, 20000: 10, 50000: 8, 250000: 6, 1000000: 4, 5
 
 big_button = {500: 15, 2000: 13, 20000: 11, 50000: 9, 250000: 7, 1000000: 5, 5000000: 3, 50000000: 1}
 
-
-
-# ----- 6 新增配置变量 -----
-predictions = []  # 预测历史，修复错误的关键字段
-last_predict_info = "未知 (初始状态)"  # 用于存储最近一次算法预测的模式信息

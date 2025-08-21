@@ -14,3 +14,7 @@ user = 123
 name = ""
 # 转账达到多少不打码
 top = 123
+# 账户余额API配置（请替换为实际值）
+ZHUQUE_COOKIE = ""  # 替换为你的实际Cookie
+ZHUQUE_X_CSRF = ""  # 替换为你的实际X-Csrf-Token
+ZHUQUE_API_URL = ""
