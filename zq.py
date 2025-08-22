@@ -197,14 +197,15 @@ async def zq_bet_on(client, event):
                     asyncio.create_task(delete_later(client, m.chat_id, m.id, 60))
                     variable.mark = True
                 else:
-                    if variable.mark:
-                        variable.explode_count += 1
-                        print("触发停止押注")
-                        variable.mark = False
-                    variable.bet = False
-                    if variable.mode == 1 or variable.mode == 2:
-                        variable.win_count = 0
-                        variable.lose_count = 0
+                    if variable.mode != 0:
+                        if variable.mark:
+                            variable.explode_count += 1
+                            print("触发停止押注")
+                            variable.mark = False
+                        variable.bet = False
+                        if variable.mode == 1 or variable.mode == 2:
+                            variable.win_count = 0
+                            variable.lose_count = 0
         else:
             variable.bet = False
     else:
