@@ -270,17 +270,17 @@ def next_trend(history):
     """
     占比追投
     """
-    if history[-1]==history[-2] and history[-2]==history[-3] :
+    if history[-1]==history[-2] and history[-2]==history[-3] and history[-3]==history[-4]:
         return history[-1]
     d = 0
     for i in history:
         if i == 1:
             d+=1
     dd = (len(history)-d)/len(history)
-    if dd>0.5:
-        return 0
-    else:
+    if dd>=0.5:
         return 1
+    else:
+        return 0
 
 def predict_next_trend(history):
     return 0 if history[-1] else 1
