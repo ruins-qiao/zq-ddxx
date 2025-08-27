@@ -164,7 +164,7 @@ async def zq_bet_on(client, event):
                                                                          variable.lose_twice,
                                                                          variable.lose_three,
                                                                          variable.lose_four)) >= 0:
-        if variable.bet_on or variable.mode ==1 or variable.mode ==2:
+        if variable.bet_on or (variable.mode ==1 and variable.mode_stop) or (variable.mode ==2 and variable.mode_stop):
             # 判断是否是开盘信息
             if event.reply_markup:
                 print(f"开始押注！")
