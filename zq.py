@@ -164,7 +164,7 @@ async def zq_bet_on(client, event):
                                                                          variable.lose_twice,
                                                                          variable.lose_three,
                                                                          variable.lose_four)) >= 0:
-        if variable.bet_on or variable.mode ==1 :
+        if variable.bet_on or variable.mode ==1 or variable.mode ==2:
             # 判断是否是开盘信息
             if event.reply_markup:
                 print(f"开始押注！")
@@ -174,7 +174,7 @@ async def zq_bet_on(client, event):
                 elif variable.mode == 0:
                     check = predict_next_trend(variable.history)
                 else:
-                    check = z_next_trend(variable.history)
+                    check = next_trend(variable.history)
                 print(f"本次押注：{check}")
                 variable.i += 1
                 # 获取押注金额 根据连胜局数和底价进行计算
@@ -266,6 +266,21 @@ def z_next_trend(history):
     """
     return history[-1]
 
+def next_trend(history):
+    """
+    占比追投
+    """
+    if history[-1]==history[-2] and history[-2]==history[-3] :
+        return history[-1]
+    d = 0
+    for i in history:
+        if i == 1:
+            d+=1
+    dd = (len(history)-d)/len(history)
+    if dd>0.5:
+        return 0
+    else:
+        return 1
 
 def predict_next_trend(history):
     return 0 if history[-1] else 1
