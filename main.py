@@ -6,6 +6,8 @@ import zq
 client = TelegramClient(config.user_session, config.api_id, config.api_hash)
 # 程序启动时 创建数据库
 zq.create_table_if_not_exists()
+# 创建去重器
+deduplicator = zq.MessageDeduplicator(time_window=5.0)
 
 
 @client.on(
@@ -19,7 +21,7 @@ async def zq_red_packet_handler(event):
     events.NewMessage(chats=config.zq_group, pattern=r"\[近 40 次结果\]\[由近及远\]\[0 小 1 大\].*",
                       from_users=config.zq_bot))
 async def zq_bet_on_handler(event):
-    await zq.zq_bet_on(client, event)
+    await zq.zq_bet_on(client, event, deduplicator)
 
 
 @client.on(

@@ -157,8 +157,9 @@ async def zq_user(client, event):
         asyncio.create_task(delete_later(client, message.chat_id, message.id, 10))
         return
 
+
 class MessageDeduplicator:
-    def __init__(self, time_window: float = 3.0):
+    def __init__(self, time_window: float = 5.0):
         """
         初始化消息去重器
         :param time_window: 时间窗口（秒），默认为30秒
@@ -196,8 +197,8 @@ class MessageDeduplicator:
         self.last_message = None
         self.last_timestamp = 0.0
 
-deduplicator = MessageDeduplicator(time_window=3.0)
-async def zq_bet_on(client, event):
+
+async def zq_bet_on(client, event, deduplicator):
     if deduplicator.should_process(event):
         await asyncio.sleep(5)
         if variable.balance > 0 and (variable.balance - calculate_bet_amount(variable.win_count, variable.lose_count,
@@ -206,7 +207,8 @@ async def zq_bet_on(client, event):
                                                                              variable.lose_twice,
                                                                              variable.lose_three,
                                                                              variable.lose_four)) >= 0:
-            if variable.bet_on or (variable.mode ==1 and variable.mode_stop) or (variable.mode ==2 and variable.mode_stop):
+            if variable.bet_on or (variable.mode == 1 and variable.mode_stop) or (
+                    variable.mode == 2 and variable.mode_stop):
                 # 判断是否是开盘信息
                 if event.reply_markup:
                     print(f"开始押注！")
@@ -222,7 +224,8 @@ async def zq_bet_on(client, event):
                     # 获取押注金额 根据连胜局数和底价进行计算
                     variable.bet_amount = calculate_bet_amount(variable.win_count, variable.lose_count,
                                                                variable.initial_amount,
-                                                               variable.lose_stop, variable.lose_once, variable.lose_twice,
+                                                               variable.lose_stop, variable.lose_once,
+                                                               variable.lose_twice,
                                                                variable.lose_three, variable.lose_four)
                     # 获取要点击的按钮集合
                     com = find_combination(variable.bet_amount)
@@ -256,7 +259,9 @@ async def zq_bet_on(client, event):
             variable.lose_count = 0
             m = await client.send_message(config.group, f"**没有足够资金进行押注 请重置余额**")
             asyncio.create_task(delete_later(client, m.chat_id, m.id, 60))
-    print(f"忽略重复消息（时间窗口内）: {event}")
+    else:
+        print(f"忽略重复消息（时间窗口内）: {event.id}")
+
 
 # 3.3 异步获取账户余额
 async def fetch_account_balance():
@@ -300,29 +305,29 @@ def calculate_losses(cycles, initial, rate1, rate2, rate3, rate4):
     return total
 
 
-
-
 def z_next_trend(history):
     """
     追投
     """
     return history[-1]
 
+
 def next_trend(history):
     """
     占比追投
     """
-    if history[-1]==history[-2]:
+    if history[-1] == history[-2]:
         return history[-1]
     d = 0
     for i in history:
         if i == 1:
-            d+=1
-    dd = (len(history)-d)/len(history)
-    if dd>=0.5:
+            d += 1
+    dd = (len(history) - d) / len(history)
+    if dd >= 0.5:
         return 1
     else:
         return 0
+
 
 def predict_next_trend(history):
     return 0 if history[-1] else 1
