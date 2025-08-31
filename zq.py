@@ -6,6 +6,8 @@ from collections import defaultdict
 import asyncio
 import re
 import os
+import time
+from typing import Any
 
 
 async def zq_user(client, event):
@@ -155,66 +157,106 @@ async def zq_user(client, event):
         asyncio.create_task(delete_later(client, message.chat_id, message.id, 10))
         return
 
+class MessageDeduplicator:
+    def __init__(self, time_window: float = 3.0):
+        """
+        初始化消息去重器
+        :param time_window: 时间窗口（秒），默认为30秒
+        """
+        self.last_message = None
+        self.last_timestamp = 0.0
+        self.time_window = time_window
 
+    def should_process(self, message: Any) -> bool:
+        """
+        判断是否应该处理该消息
+        :param message: 接收到的消息
+        :return: True 表示需要处理，False 表示重复消息
+        """
+        current_time = time.time()
+
+        # 如果是第一条消息，直接处理
+        if self.last_message is None:
+            self.last_message = message
+            self.last_timestamp = current_time
+            return True
+
+        # 检查是否在时间窗口内
+        is_duplicate = (current_time - self.last_timestamp) < self.time_window
+
+        # 更新最后的消息信息
+        self.last_message = message
+        self.last_timestamp = current_time
+
+        # 如果在时间窗口内，认为是重复消息，不处理
+        return not is_duplicate
+
+    def reset(self):
+        """重置去重器状态"""
+        self.last_message = None
+        self.last_timestamp = 0.0
+
+deduplicator = MessageDeduplicator(time_window=3.0)
 async def zq_bet_on(client, event):
-    await asyncio.sleep(5)
-    if variable.balance > 0 and (variable.balance - calculate_bet_amount(variable.win_count, variable.lose_count,
-                                                                         variable.initial_amount,
-                                                                         variable.lose_stop, variable.lose_once,
-                                                                         variable.lose_twice,
-                                                                         variable.lose_three,
-                                                                         variable.lose_four)) >= 0:
-        if variable.bet_on or (variable.mode ==1 and variable.mode_stop) or (variable.mode ==2 and variable.mode_stop):
-            # 判断是否是开盘信息
-            if event.reply_markup:
-                print(f"开始押注！")
-                # 获取压大还是小
-                if variable.mode == 1:
-                    check = z_next_trend(variable.history)
-                elif variable.mode == 0:
-                    check = predict_next_trend(variable.history)
-                else:
-                    check = next_trend(variable.history)
-                print(f"本次押注：{check}")
-                variable.i += 1
-                # 获取押注金额 根据连胜局数和底价进行计算
-                variable.bet_amount = calculate_bet_amount(variable.win_count, variable.lose_count,
-                                                           variable.initial_amount,
-                                                           variable.lose_stop, variable.lose_once, variable.lose_twice,
-                                                           variable.lose_three, variable.lose_four)
-                # 获取要点击的按钮集合
-                com = find_combination(variable.bet_amount)
-                print(f"本次押注金额：{com}")
-                # 押注
-                if len(com) > 0:
-                    variable.bet = True
-                    await bet(check, com, event)
-                    mes = f"""
-                    **⚡ 押注： {"押大" if check else "押小"}
-💵 金额： {variable.bet_amount}**
-                    """
-                    m = await client.send_message(config.group, mes, parse_mode="markdown")
-                    asyncio.create_task(delete_later(client, m.chat_id, m.id, 60))
-                    variable.mark = True
-                else:
-                    if variable.mode != 0:
-                        if variable.mark:
-                            variable.explode_count += 1
-                            print("触发停止押注")
-                            variable.mark = False
-                        variable.bet = False
-                        if variable.mode == 1 or variable.mode == 2:
-                            variable.win_count = 0
-                            variable.lose_count = 0
+    if deduplicator.should_process(event):
+        await asyncio.sleep(5)
+        if variable.balance > 0 and (variable.balance - calculate_bet_amount(variable.win_count, variable.lose_count,
+                                                                             variable.initial_amount,
+                                                                             variable.lose_stop, variable.lose_once,
+                                                                             variable.lose_twice,
+                                                                             variable.lose_three,
+                                                                             variable.lose_four)) >= 0:
+            if variable.bet_on or (variable.mode ==1 and variable.mode_stop) or (variable.mode ==2 and variable.mode_stop):
+                # 判断是否是开盘信息
+                if event.reply_markup:
+                    print(f"开始押注！")
+                    # 获取压大还是小
+                    if variable.mode == 1:
+                        check = z_next_trend(variable.history)
+                    elif variable.mode == 0:
+                        check = predict_next_trend(variable.history)
+                    else:
+                        check = next_trend(variable.history)
+                    print(f"本次押注：{check}")
+                    variable.i += 1
+                    # 获取押注金额 根据连胜局数和底价进行计算
+                    variable.bet_amount = calculate_bet_amount(variable.win_count, variable.lose_count,
+                                                               variable.initial_amount,
+                                                               variable.lose_stop, variable.lose_once, variable.lose_twice,
+                                                               variable.lose_three, variable.lose_four)
+                    # 获取要点击的按钮集合
+                    com = find_combination(variable.bet_amount)
+                    print(f"本次押注金额：{com}")
+                    # 押注
+                    if len(com) > 0:
+                        variable.bet = True
+                        await bet(check, com, event)
+                        mes = f"""
+                        **⚡ 押注： {"押大" if check else "押小"}
+    💵 金额： {variable.bet_amount}**
+                        """
+                        m = await client.send_message(config.group, mes, parse_mode="markdown")
+                        asyncio.create_task(delete_later(client, m.chat_id, m.id, 60))
+                        variable.mark = True
+                    else:
+                        if variable.mode != 0:
+                            if variable.mark:
+                                variable.explode_count += 1
+                                print("触发停止押注")
+                                variable.mark = False
+                            variable.bet = False
+                            if variable.mode == 1 or variable.mode == 2:
+                                variable.win_count = 0
+                                variable.lose_count = 0
+            else:
+                variable.bet = False
         else:
             variable.bet = False
-    else:
-        variable.bet = False
-        variable.win_count = 0
-        variable.lose_count = 0
-        m = await client.send_message(config.group, f"**没有足够资金进行押注 请重置余额**")
-        asyncio.create_task(delete_later(client, m.chat_id, m.id, 60))
-
+            variable.win_count = 0
+            variable.lose_count = 0
+            m = await client.send_message(config.group, f"**没有足够资金进行押注 请重置余额**")
+            asyncio.create_task(delete_later(client, m.chat_id, m.id, 60))
+    print(f"忽略重复消息（时间窗口内）: {event}")
 
 # 3.3 异步获取账户余额
 async def fetch_account_balance():
