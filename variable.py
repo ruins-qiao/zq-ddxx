@@ -45,6 +45,8 @@ mark = True
 flag = True
 # 暂停开关
 mode_stop = True
+# 占比追投 临时变量
+chase = 2
 
 
 i = 1

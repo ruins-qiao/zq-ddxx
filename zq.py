@@ -65,6 +65,9 @@ async def zq_user(client, event):
         asyncio.create_task(delete_later(client, message.chat_id, message.id, 10))
         return
     if "ms" == my[0]:
+        if my[1] == 2:
+            if len(my) > 2:
+                variable.chase = my[2]
         variable.mode = int(my[1])
         mes = f"""设置成功"""
         message = await client.send_message(config.group, mes, parse_mode="markdown")
@@ -316,17 +319,25 @@ def next_trend(history):
     """
     占比追投
     """
-    if history[-1] == history[-2]:
+    # 获取列表的最后 n 个元素
+    last_n_elements = history[-variable.chase:]
+    # 判断这些元素是否都相同
+    # 将切片转换为集合，如果所有元素相同，集合的长度就是1
+    if len(set(last_n_elements)) == 1:
+        # 如果相同，返回列表的最后一个元素
         return history[-1]
-    d = 0
-    for i in history:
-        if i == 1:
-            d += 1
-    dd = (len(history) - d) / len(history)
-    if dd >= 0.5:
-        return 1
-    else:
+    # 不相同按照占比押注
+    # 获取列表总长度
+    total_count = len(history)
+    # 统计 1 的数量
+    ones_count = history.count(1)
+    # 计算 1 的占比
+    ratio_of_ones = ones_count / total_count
+    # 判断占比并返回结果
+    if ratio_of_ones > 0.5:
         return 0
+    else:
+        return 1
 
 
 def predict_next_trend(history):
