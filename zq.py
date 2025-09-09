@@ -67,7 +67,7 @@ async def zq_user(client, event):
     if "ms" == my[0]:
         if my[1] == 2:
             if len(my) > 2:
-                variable.chase = my[2]
+                variable.chase = int(my[2])
         variable.mode = int(my[1])
         mes = f"""设置成功"""
         message = await client.send_message(config.group, mes, parse_mode="markdown")
