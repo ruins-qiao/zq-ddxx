@@ -10,21 +10,18 @@
 
 ## 安装使用 
 ```bash
-# 安装 virtualenv
-sudo apt install python3-venv
-
-# 创建虚拟环境
-python3 -m venv venv
-
-# 激活虚拟环境
-source myenv/bin/activate
-
-# 在虚拟环境中依赖包
-pip install telethon
-
-# 后台运行py文件
-nohup python3 main.py &
-
-# 退出虚拟环境
-deactivate
+docker run -d --name my-telegram-bot --restart always \
+  -e API_ID='你的API_ID' \
+  -e API_HASH='你的API_HASH' \
+  -e USER_SESSION='user_session' \
+  -e GROUP_IDS='-1001234567,-1007654321' \
+  -e ZQ_GROUP_IDS='-1008888888,-1009999999' \
+  -e ZQ_BOT='机器人的数字ID' \
+  -e USER_ID='你的Telegram用户数字ID' \
+  -e NAME='自定义的统计名称' \
+  -e TOP='1000' \
+  -e ZHUQUE_COOKIE='服务Cookie' \
+  -e ZHUQUE_X_CSRF='服务X-Csrf-Token' \
+  -e ZHUQUE_API_URL='API的URL地址' \
+  your-image-name:latest
 ```
