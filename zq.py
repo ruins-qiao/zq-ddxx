@@ -363,6 +363,7 @@ def predict_next_trend(history):
 def calculate_bet_amount(win_count, lose_count, initial_amount, lose_stop, lose_once, lose_twice, lose_three,
                          lose_four):
     if win_count == 0 and lose_count == 0:
+        variable.fierce_amount = 0
         return closest_multiple_of_500(initial_amount)
     elif win_count > 0 and lose_count == 0:
         if win_count == 1:
@@ -389,7 +390,7 @@ def calculate_bet_amount(win_count, lose_count, initial_amount, lose_stop, lose_
                     variable.fierce_amount = variable.fierce_amount * variable.fierce_times[1]
             else:
                 variable.fierce_amount = 0
-        return closest_multiple_of_500(variable.bet_amount * lose_four)
+            return closest_multiple_of_500(variable.bet_amount * lose_four)
 
 
 def find_combination(target):
@@ -474,16 +475,22 @@ async def zq_settle(client, event):
                 if variable.bet_type == 1:
                     variable.win_total += 1
                     variable.earnings += (int(variable.bet_amount * 0.99))
+                    variable.earnings += (int(variable.fierce_amount * 0.99))
                     variable.period_profit += (int(variable.bet_amount * 0.99))
+                    variable.period_profit += (int(variable.fierce_amount * 0.99))
                     variable.balance += (int(variable.bet_amount * 0.99))
+                    variable.balance += (int(variable.fierce_amount * 0.99))
                     variable.win_count += 1
                     variable.lose_count = 0
                     variable.status = 1
                     variable.lose_history.append(1)
                 else:
                     variable.earnings -= variable.bet_amount
+                    variable.earnings -= variable.fierce_amount
                     variable.period_profit -= variable.bet_amount
+                    variable.period_profit -= variable.fierce_amount
                     variable.balance -= variable.bet_amount
+                    variable.balance -= variable.fierce_amount
                     variable.win_count = 0
                     variable.lose_count += 1
                     variable.status = 0
@@ -492,16 +499,22 @@ async def zq_settle(client, event):
                 if variable.bet_type == 0:
                     variable.win_total += 1
                     variable.earnings += (int(variable.bet_amount * 0.99))
+                    variable.earnings += (int(variable.fierce_amount * 0.99))
                     variable.period_profit += (int(variable.bet_amount * 0.99))
+                    variable.period_profit += (int(variable.fierce_amount * 0.99))
                     variable.balance += (int(variable.bet_amount * 0.99))
+                    variable.balance += (int(variable.fierce_amount * 0.99))
                     variable.win_count += 1
                     variable.lose_count = 0
                     variable.status = 1
                     variable.lose_history.append(1)
                 else:
                     variable.earnings -= variable.bet_amount
+                    variable.earnings -= variable.fierce_amount
                     variable.period_profit -= variable.bet_amount
+                    variable.period_profit -= variable.fierce_amount
                     variable.balance -= variable.bet_amount
+                    variable.balance -= variable.fierce_amount
                     variable.win_count = 0
                     variable.lose_count += 1
                     variable.status = 0
