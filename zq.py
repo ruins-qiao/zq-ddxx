@@ -255,7 +255,7 @@ async def zq_bet_on(client, event, deduplicator):
                         await bet(check, com, event)
                         mes = f"""
                         **⚡ 押注： {"押大" if check else "押小"}
-    💵 金额： {variable.bet_amount}**
+    💵 金额： {(variable.bet_amount+variable.fierce_amount)}**
                         """
                         m = await client.send_message(config.group, mes, parse_mode="markdown")
                         asyncio.create_task(delete_later(client, m.chat_id, m.id, 60))
@@ -613,7 +613,7 @@ async def zq_settle(client, event):
         if variable.stop_count >= 1:
             mes += f"""\n\n还剩 {variable.stop_count} 局恢复押注"""
         if variable.bet:
-            mess = f"""**📉 输赢统计： {"赢" if variable.status else "输"} {int(variable.bet_amount * 0.99) if variable.status else variable.bet_amount}\n🎲 结果： {event.pattern_match.group(2)}**"""
+            mess = f"""**📉 输赢统计： {"赢" if variable.status else "输"} {int((variable.bet_amount * 0.99)+(variable.fierce_amount*0.99)) if variable.status else (variable.bet_amount+variable.fierce_amount)}\n🎲 结果： {event.pattern_match.group(2)}**"""
             m = await client.send_message(config.group, mess, parse_mode="markdown")
             asyncio.create_task(delete_later(client, m.chat_id, m.id, 60))
         variable.message = await client.send_message(config.group, mes, parse_mode="markdown")
