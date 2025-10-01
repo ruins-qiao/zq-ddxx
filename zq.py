@@ -247,7 +247,7 @@ async def zq_bet_on(client, event, deduplicator):
                                                                variable.lose_twice,
                                                                variable.lose_three, variable.lose_four)
                     # 获取要点击的按钮集合
-                    com = find_combination(variable.bet_amount)
+                    com = find_combination(variable.bet_amount+variable.fierce_amount)
                     print(f"本次押注金额：{com}")
                     # 押注
                     if len(com) > 0:
@@ -381,17 +381,15 @@ def calculate_bet_amount(win_count, lose_count, initial_amount, lose_stop, lose_
         if lose_count == 3:
             return closest_multiple_of_500(variable.bet_amount * lose_three)
         if lose_count >= 4:
-            # 计算正常押注金额
-            l = variable.bet_amount * lose_four
             if (lose_count - 3) > variable.fierce_limit_count:
                 # 计算猛押注金额
                 if (lose_count - 3) == 1:
                     variable.fierce_amount = variable.fierce_initial * variable.fierce_times[0]
                 else:
                     variable.fierce_amount = variable.fierce_amount * variable.fierce_times[1]
-                return closest_multiple_of_500(l + variable.fierce_amount)
             else:
-                return closest_multiple_of_500(l)
+                variable.fierce_amount = 0
+        return closest_multiple_of_500(variable.bet_amount * lose_four)
 
 
 def find_combination(target):
@@ -592,7 +590,10 @@ async def zq_settle(client, event):
         mes += f"""💥 **炸 {variable.explode} 次 暂停 {variable.stop} 局**\n"""
         mes += f"""📈 **盈利 {variable.profit} 暂停 {variable.profit_stop} 局 **\n"""
         mes += f"""📈 **本轮盈利 {variable.period_profit}\n📉 押注倍率 {variable.lose_once} / {variable.lose_twice} / {variable.lose_three} / {variable.lose_four} **\n"""
-        mes += f"""📈 **赢二倍局数 {variable.win}**\n\n"""
+        mes += f"""📈 **赢二倍局数 {variable.win}**\n"""
+        mes += f"""📈 **莽金额 {variable.fierce_initial}**\n"""
+        mes += f"""📈 **莽次数 {variable.fierce_limit_count}**\n"""
+        mes += f"""📈 **莽倍数 {variable.fierce_times[0]} / {variable.fierce_times[1]}**\n\n"""
         if variable.win_total > 0:
             mes += f"""🎯 **押注次数：{variable.total}\n🏆 胜率：{variable.win_total / variable.total * 100:.2f}%**\n"""
         mes += f"""💰 **收益：{variable.earnings}\n💰 总余额：{variable.balance}**\n"""
