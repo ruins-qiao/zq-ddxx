@@ -67,6 +67,14 @@ total = 0
 # 记录m1胜利局数
 win_total = 0
 
+# 猛初始金额
+fierce_initial =0
+# 猛押注金额
+fierce_amount = 0
+# 猛几次
+fierce_limit_count = 3
+# 猛倍率
+fierce_times = [3,2]
 
 # 初始金额
 initial_amount = 500

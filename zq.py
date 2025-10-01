@@ -24,10 +24,26 @@ async def zq_user(client, event):
 - ys - 保存预设策略 (ys yc 30 3 3.0 3.0 3.0 3.0 10000)\n
 - yss - 查看或删除预设 (yss 或 yss dl yc)\n
 - js - 计算预设所需资金 (js ys1)\n
+- m - 猛模式配置 初始金额(默认0相当于不开启猛) 猛几次(默认3次) 猛第一倍率(默认3倍) 猛第二倍率(默认2倍)
 - h - 查看帮助 (help)```"""
         message = await client.send_message(config.group, help_message, parse_mode="markdown")
         asyncio.create_task(delete_later(client, event.chat_id, event.id, 60))
         asyncio.create_task(delete_later(client, message.chat_id, message.id, 60))
+        return
+    if "m" == my[0]:
+        if "init" == my[1]:
+            variable.fierce_initial = 0
+            variable.fierce_limit_count = 3
+            variable.fierce_times[0] = 3
+            variable.fierce_times[1] = 2
+        variable.fierce_initial = int(my[1])
+        variable.fierce_limit_count = int(my[2])
+        variable.fierce_times[0] = int(my[3])
+        variable.fierce_times[1] = int(my[4])
+        mes = f"""启动 猛"""
+        message = await client.send_message(config.group, mes, parse_mode="markdown")
+        asyncio.create_task(delete_later(client, event.chat_id, event.id, 10))
+        asyncio.create_task(delete_later(client, message.chat_id, message.id, 10))
         return
     if "st" == my[0]:
         yss = query_records(my[1])
@@ -365,7 +381,17 @@ def calculate_bet_amount(win_count, lose_count, initial_amount, lose_stop, lose_
         if lose_count == 3:
             return closest_multiple_of_500(variable.bet_amount * lose_three)
         if lose_count >= 4:
-            return closest_multiple_of_500(variable.bet_amount * lose_four)
+            # 计算正常押注金额
+            l = variable.bet_amount * lose_four
+            if (lose_count - 3) > variable.fierce_limit_count:
+                # 计算猛押注金额
+                if (lose_count - 3) == 1:
+                    variable.fierce_amount = variable.fierce_initial * variable.fierce_times[0]
+                else:
+                    variable.fierce_amount = variable.fierce_amount * variable.fierce_times[1]
+                return closest_multiple_of_500(l + variable.fierce_amount)
+            else:
+                return closest_multiple_of_500(l)
 
 
 def find_combination(target):
