@@ -228,7 +228,7 @@ async def zq_bet_on(client, event, deduplicator):
                                                                              variable.lose_stop, variable.lose_once,
                                                                              variable.lose_twice,
                                                                              variable.lose_three,
-                                                                             variable.lose_four,0)) >= 0:
+                                                                             variable.lose_four, 0)) >= 0:
             if variable.bet_on or (variable.mode == 1 and variable.mode_stop) or (
                     variable.mode == 2 and variable.mode_stop):
                 # 判断是否是开盘信息
@@ -248,9 +248,9 @@ async def zq_bet_on(client, event, deduplicator):
                                                                variable.initial_amount,
                                                                variable.lose_stop, variable.lose_once,
                                                                variable.lose_twice,
-                                                               variable.lose_three, variable.lose_four,1)
+                                                               variable.lose_three, variable.lose_four, 1)
                     # 获取要点击的按钮集合
-                    com = find_combination(variable.bet_amount+variable.fierce_amount)
+                    com = find_combination(variable.bet_amount + variable.fierce_amount)
                     print(f"本次押注金额：{com}")
                     # 押注
                     if len(com) > 0:
@@ -258,7 +258,7 @@ async def zq_bet_on(client, event, deduplicator):
                         await bet(check, com, event)
                         mes = f"""
                         **⚡ 押注： {"押大" if check else "押小"}
-    💵 金额： {(variable.bet_amount+variable.fierce_amount)}**
+    💵 金额： {(variable.bet_amount + variable.fierce_amount)}**
                         """
                         m = await client.send_message(config.group, mes, parse_mode="markdown")
                         asyncio.create_task(delete_later(client, m.chat_id, m.id, 60))
@@ -364,7 +364,7 @@ def predict_next_trend(history):
 
 
 def calculate_bet_amount(win_count, lose_count, initial_amount, lose_stop, lose_once, lose_twice, lose_three,
-                         lose_four,i):
+                         lose_four, i):
     if win_count == 0 and lose_count == 0:
         variable.fierce_amount = 0
         return closest_multiple_of_500(initial_amount)
@@ -384,12 +384,14 @@ def calculate_bet_amount(win_count, lose_count, initial_amount, lose_stop, lose_
             if i == 1:
                 if (lose_count - variable.fierce_lose_count) < variable.fierce_limit_count:
                     # 计算猛押注金额
-                    if (lose_count - variable.fierce_lose_count ) == 0:
-                        variable.fierce_amount = variable.fierce_initial
-                    elif (lose_count - variable.fierce_lose_count ) == 1:
-                        variable.fierce_amount = variable.fierce_amount * variable.fierce_times[0]
+                    if (lose_count - variable.fierce_lose_count) == 0:
+                        variable.fierce_amount = closest_multiple_of_500(variable.fierce_initial)
+                    elif (lose_count - variable.fierce_lose_count) == 1:
+                        variable.fierce_amount = closest_multiple_of_500(
+                            variable.fierce_amount * variable.fierce_times[0])
                     else:
-                        variable.fierce_amount = variable.fierce_amount * variable.fierce_times[1]
+                        variable.fierce_amount = closest_multiple_of_500(
+                            variable.fierce_amount * variable.fierce_times[1])
                 else:
                     variable.fierce_amount = 0
             return closest_multiple_of_500(variable.bet_amount * lose_four)
@@ -399,6 +401,7 @@ def calculate_bet_amount(win_count, lose_count, initial_amount, lose_stop, lose_
             return closest_multiple_of_500(variable.bet_amount * lose_twice)
         if lose_count == 3:
             return closest_multiple_of_500(variable.bet_amount * lose_three)
+
 
 def find_combination(target):
     """
@@ -631,7 +634,7 @@ async def zq_settle(client, event):
         if variable.stop_count >= 1:
             mes += f"""\n\n还剩 {variable.stop_count} 局恢复押注"""
         if variable.bet:
-            mess = f"""**📉 输赢统计： {"赢" if variable.status else "输"} {int((variable.bet_amount * 0.99)+(variable.fierce_amount*0.99)) if variable.status else (variable.bet_amount+variable.fierce_amount)}\n🎲 结果： {event.pattern_match.group(2)}**"""
+            mess = f"""**📉 输赢统计： {"赢" if variable.status else "输"} {int((variable.bet_amount * 0.99) + (variable.fierce_amount * 0.99)) if variable.status else (variable.bet_amount + variable.fierce_amount)}\n🎲 结果： {event.pattern_match.group(2)}**"""
             m = await client.send_message(config.group, mess, parse_mode="markdown")
             asyncio.create_task(delete_later(client, m.chat_id, m.id, 60))
         variable.message = await client.send_message(config.group, mes, parse_mode="markdown")
