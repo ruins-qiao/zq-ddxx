@@ -73,6 +73,8 @@ fierce_initial =0
 fierce_amount = 0
 # 猛几次
 fierce_limit_count = 3
+# 输几次开始猛几次
+fierce_lose_count = 2
 # 猛倍率
 fierce_times = [3,2]
 
