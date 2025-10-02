@@ -382,22 +382,25 @@ def calculate_bet_amount(win_count, lose_count, initial_amount, lose_stop, lose_
         if lose_count == 1:
             return closest_multiple_of_500(initial_amount * lose_once)
         #if lose_count == 2:
-        #    return closest_multiple_of_500(variable.bet_amount * lose_twice)
+        #    return closest_multiple_of_500(variable.bet_  * lose_twice)
         #if lose_count == 3:
         #    return closest_multiple_of_500(variable.bet_amount * lose_three)
         if lose_count >= variable.fierce_lose_count:
-            if (lose_count - 1) <= variable.fierce_limit_count:
+            if (lose_count - variable.fierce_lose_count ) <= variable.fierce_limit_count:
                 # 计算猛押注金额
-                if (lose_count - 1) == 1:
+                if (lose_count - variable.fierce_lose_count ) == 0:
                     variable.fierce_amount = variable.fierce_initial
-                elif (lose_count - 1) == 2:
+                elif (lose_count - variable.fierce_lose_count ) == 1:
                     variable.fierce_amount = variable.fierce_amount * variable.fierce_times[0]
                 else:
                     variable.fierce_amount = variable.fierce_amount * variable.fierce_times[1]
             else:
                 variable.fierce_amount = 0
             return closest_multiple_of_500(variable.bet_amount * lose_four)
-
+        if lose_count == 2:
+            return closest_multiple_of_500(variable.bet_amount * lose_twice)
+        if lose_count == 3:
+            return closest_multiple_of_500(variable.bet_amount * lose_three)
 
 def find_combination(target):
     """
