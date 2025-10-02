@@ -72,11 +72,11 @@ fierce_initial =0
 # 猛押注金额
 fierce_amount = 0
 # 猛几次
-fierce_limit_count = 3
+fierce_limit_count = 5
 # 输几次开始猛几次
-fierce_lose_count = 2
+fierce_lose_count = 4
 # 猛倍率
-fierce_times = [3,2]
+fierce_times = [3.0,2.05]
 
 # 初始金额
 initial_amount = 500

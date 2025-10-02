@@ -18,7 +18,7 @@ async def zq_user(client, event):
 - st - 启动命令 (st ys_name ) \n
 - res - 重置统计数据 (res)\n
 - set - 设置参数：被炸几次触发、赢利多少触发、炸停止多久、盈利停止多久、手动恢复对局设置为“1” (set 5 1000000 3 5 1)\n
-- ms - 切换模式：0指定反投,1连反,2连追 (ms 1) 设置参数 模式 赢时翻倍局数\n
+- ms - 切换模式：0指定反投,1连反,2连追 (ms 1) 设置参数 模式 赢时翻倍局数 ms 2 2 3\n
 - xx - 删除群组消息 (xx)\n
 - top - 显示捐赠排行榜 (top)\n
 - ys - 保存预设策略 (ys yc 30 3 3.0 3.0 3.0 3.0 10000)\n
@@ -33,15 +33,15 @@ async def zq_user(client, event):
     if "m" == my[0]:
         if "init" == my[1]:
             variable.fierce_initial = 0
-            variable.fierce_lose_count = 2
-            variable.fierce_limit_count = 3
-            variable.fierce_times[0] = 3
-            variable.fierce_times[1] = 2
+            variable.fierce_lose_count = 4
+            variable.fierce_limit_count = 5
+            variable.fierce_times[0] = 3.0
+            variable.fierce_times[1] = 2.05
         variable.fierce_initial = int(my[1])
         variable.fierce_lose_count = int(my[2])
         variable.fierce_limit_count = int(my[3])
-        variable.fierce_times[0] = int(my[4])
-        variable.fierce_times[1] = int(my[5])
+        variable.fierce_times[0] = float(my[4])
+        variable.fierce_times[1] = float(my[5])
         mes = f"""启动 猛"""
         message = await client.send_message(config.group, mes, parse_mode="markdown")
         asyncio.create_task(delete_later(client, event.chat_id, event.id, 10))
@@ -382,7 +382,7 @@ def calculate_bet_amount(win_count, lose_count, initial_amount, lose_stop, lose_
             return 0
         if lose_count >= variable.fierce_lose_count:
             if i == 1:
-                if (lose_count - variable.fierce_lose_count ) <= variable.fierce_limit_count:
+                if (lose_count - variable.fierce_lose_count) < variable.fierce_limit_count:
                     # 计算猛押注金额
                     if (lose_count - variable.fierce_lose_count ) == 0:
                         variable.fierce_amount = variable.fierce_initial
@@ -537,10 +537,20 @@ async def zq_settle(client, event):
                     mes = f"""**💥 本轮炸了收益如下：{variable.period_profit} 灵石**\n"""
                     await client.send_message(config.group, mes, parse_mode="markdown")
                     variable.stop_count = variable.stop
+                    variable.fierce_initial = 0
+                    variable.fierce_lose_count = 4
+                    variable.fierce_limit_count = 5
+                    variable.fierce_times[0] = 3.0
+                    variable.fierce_times[1] = 2.05
                 elif variable.period_profit >= variable.profit:
                     mes = f"""**📈 本轮赢了一共赢得：{variable.period_profit} 灵石**"""
                     await client.send_message(config.group, mes, parse_mode="markdown")
                     variable.stop_count = variable.profit_stop
+                    variable.fierce_initial = 0
+                    variable.fierce_lose_count = 4
+                    variable.fierce_limit_count = 5
+                    variable.fierce_times[0] = 3.0
+                    variable.fierce_times[1] = 2.05
                 else:
                     variable.stop_count = variable.stop
             if variable.stop_count > 0:
@@ -612,6 +622,7 @@ async def zq_settle(client, event):
         mes += f"""📈 **本轮盈利 {variable.period_profit}\n📉 押注倍率 {variable.lose_once} / {variable.lose_twice} / {variable.lose_three} / {variable.lose_four} **\n"""
         mes += f"""📈 **赢二倍局数 {variable.win}**\n"""
         mes += f"""📈 **莽金额 {variable.fierce_initial}**\n"""
+        mes += f"""📈 **几连开始莽 {variable.fierce_lose_count}**\n"""
         mes += f"""📈 **莽次数 {variable.fierce_limit_count}**\n"""
         mes += f"""📈 **莽倍数 {variable.fierce_times[0]} / {variable.fierce_times[1]}**\n\n"""
         if variable.win_total > 0:
