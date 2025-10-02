@@ -375,21 +375,20 @@ def calculate_bet_amount(win_count, lose_count, initial_amount, lose_stop, lose_
             return variable.bet_amount
     else:
         if (lose_count + 1) > lose_stop:
+            variable.fierce_amount = 0
             return 0
         if lose_count == 1:
-            variable.fierce_amount = 0
             return closest_multiple_of_500(initial_amount * lose_once)
-        if lose_count == 2:
-            variable.fierce_amount = 0
-            return closest_multiple_of_500(variable.bet_amount * lose_twice)
+        #if lose_count == 2:
+        #    return closest_multiple_of_500(variable.bet_amount * lose_twice)
         #if lose_count == 3:
-         #   return closest_multiple_of_500(variable.bet_amount * lose_three)
-        if lose_count >= 3:
-            if (lose_count - 2) <= variable.fierce_limit_count:
+        #    return closest_multiple_of_500(variable.bet_amount * lose_three)
+        if lose_count >= 2:
+            if (lose_count - 1) <= variable.fierce_limit_count:
                 # 计算猛押注金额
-                if (lose_count - 2) == 1:
+                if (lose_count - 1) == 1:
                     variable.fierce_amount = variable.fierce_initial
-                elif (lose_count - 2) == 2:
+                elif (lose_count - 1) == 2:
                     variable.fierce_amount = variable.fierce_amount * variable.fierce_times[0]
                 else:
                     variable.fierce_amount = variable.fierce_amount * variable.fierce_times[1]
