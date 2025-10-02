@@ -87,6 +87,7 @@ async def zq_user(client, event):
             if len(my) > 2:
                 variable.chase = int(my[2])
         variable.mode = int(my[1])
+        variable.win = int(my[3])
         mes = f"""设置成功"""
         message = await client.send_message(config.group, mes, parse_mode="markdown")
         asyncio.create_task(delete_later(client, event.chat_id, event.id, 10))
@@ -227,7 +228,7 @@ async def zq_bet_on(client, event, deduplicator):
                                                                              variable.lose_stop, variable.lose_once,
                                                                              variable.lose_twice,
                                                                              variable.lose_three,
-                                                                             variable.lose_four)) >= 0:
+                                                                             variable.lose_four,0)) >= 0:
             if variable.bet_on or (variable.mode == 1 and variable.mode_stop) or (
                     variable.mode == 2 and variable.mode_stop):
                 # 判断是否是开盘信息
@@ -247,7 +248,7 @@ async def zq_bet_on(client, event, deduplicator):
                                                                variable.initial_amount,
                                                                variable.lose_stop, variable.lose_once,
                                                                variable.lose_twice,
-                                                               variable.lose_three, variable.lose_four)
+                                                               variable.lose_three, variable.lose_four,1)
                     # 获取要点击的按钮集合
                     com = find_combination(variable.bet_amount+variable.fierce_amount)
                     print(f"本次押注金额：{com}")
@@ -363,7 +364,7 @@ def predict_next_trend(history):
 
 
 def calculate_bet_amount(win_count, lose_count, initial_amount, lose_stop, lose_once, lose_twice, lose_three,
-                         lose_four):
+                         lose_four,i):
     if win_count == 0 and lose_count == 0:
         variable.fierce_amount = 0
         return closest_multiple_of_500(initial_amount)
@@ -379,24 +380,21 @@ def calculate_bet_amount(win_count, lose_count, initial_amount, lose_stop, lose_
         if (lose_count + 1) > lose_stop:
             variable.fierce_amount = 0
             return 0
+        if lose_count >= variable.fierce_lose_count:
+            if i == 1:
+                if (lose_count - variable.fierce_lose_count ) <= variable.fierce_limit_count:
+                    # 计算猛押注金额
+                    if (lose_count - variable.fierce_lose_count ) == 0:
+                        variable.fierce_amount = variable.fierce_initial
+                    elif (lose_count - variable.fierce_lose_count ) == 1:
+                        variable.fierce_amount = variable.fierce_amount * variable.fierce_times[0]
+                    else:
+                        variable.fierce_amount = variable.fierce_amount * variable.fierce_times[1]
+                else:
+                    variable.fierce_amount = 0
+            return closest_multiple_of_500(variable.bet_amount * lose_four)
         if lose_count == 1:
             return closest_multiple_of_500(initial_amount * lose_once)
-        #if lose_count == 2:
-        #    return closest_multiple_of_500(variable.bet_  * lose_twice)
-        #if lose_count == 3:
-        #    return closest_multiple_of_500(variable.bet_amount * lose_three)
-        if lose_count >= variable.fierce_lose_count:
-            if (lose_count - variable.fierce_lose_count ) <= variable.fierce_limit_count:
-                # 计算猛押注金额
-                if (lose_count - variable.fierce_lose_count ) == 0:
-                    variable.fierce_amount = variable.fierce_initial
-                elif (lose_count - variable.fierce_lose_count ) == 1:
-                    variable.fierce_amount = variable.fierce_amount * variable.fierce_times[0]
-                else:
-                    variable.fierce_amount = variable.fierce_amount * variable.fierce_times[1]
-            else:
-                variable.fierce_amount = 0
-            return closest_multiple_of_500(variable.bet_amount * lose_four)
         if lose_count == 2:
             return closest_multiple_of_500(variable.bet_amount * lose_twice)
         if lose_count == 3:
