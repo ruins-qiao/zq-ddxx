@@ -92,6 +92,8 @@ auto_fierce_times = [3.0,2.0]
 auto_fierce_time_window = 3600.0
 # 自动莽 上一次连输几次后 开启自动莽
 auto_Last_time_lose = 4
+# 自动莽 标记上一轮还没结束
+auto_mark = True
 
 # 初始金额
 initial_amount = 500

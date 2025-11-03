@@ -34,12 +34,13 @@ async def zq_user(client, event):
     if "m" == my[0]:
         if "auto" == my[1]:
             variable.fierce_bet = True
-            variable.fierce_initial = int(my[2])
-            variable.fierce_lose_count = int(my[3])
-            variable.fierce_limit_count = int(my[4])
-            variable.fierce_times[0] = float(my[5])
-            variable.fierce_times[1] = float(my[6])
+            variable.auto_fierce_initial = int(my[2])
+            variable.auto_fierce_lose_count = int(my[3])
+            variable.auto_fierce_limit_count = int(my[4])
+            variable.auto_fierce_times[0] = float(my[5])
+            variable.auto_fierce_times[1] = float(my[6])
             variable.auto_fierce_time_window = float(my[7])
+            variable.auto_Last_time_lose = int(my[8])
             mes = f"""启动 自动莽"""
             message = await client.send_message(config.group, mes, parse_mode="markdown")
             asyncio.create_task(delete_later(client, event.chat_id, event.id, 10))
@@ -228,6 +229,30 @@ class MessageDeduplicator:
         self.last_message = None
         self.last_timestamp = 0.0
 
+class OneTimeExecutor:
+    def __init__(self, time_window: float = 3600.0):
+        self.time_window = time_window
+        self.execution_time = None  # None表示从未执行
+
+    def should_execute(self) -> bool:
+        current_time = time.time()
+
+        if self.execution_time is None:
+            # 第一次执行
+            self.execution_time = current_time
+            return True
+
+        # 检查是否超过时间窗口
+        if current_time - self.execution_time >= self.time_window:
+            # 重置：更新时间但不改变状态，相当于新一轮的"第一次"
+            self.execution_time = current_time
+            return True
+
+        return False
+
+    def reset(self):
+        """完全重置"""
+        self.execution_time = None
 
 async def zq_bet_on(client, event, deduplicator):
     if deduplicator.should_process(event):
@@ -390,7 +415,12 @@ def calculate_bet_amount(win_count, lose_count, initial_amount, lose_stop, lose_
             variable.fierce_amount = 0
             return 0
         if lose_count >= variable.auto_Last_time_lose:
-            auto_fierce(lose_count)
+            if i == 1:
+               # print(f"触发自动莽：{lose_count},{variable.auto_Last_time_lose}")
+                auto_fierce(lose_count)
+        else:
+           # print(f"上一轮结束了")
+            variable.auto_mark = True
         if lose_count >= variable.fierce_lose_count:
             if i == 1:
                 if (lose_count - variable.fierce_lose_count) < variable.fierce_limit_count:
@@ -406,7 +436,11 @@ def calculate_bet_amount(win_count, lose_count, initial_amount, lose_stop, lose_
                 else:
                     variable.fierce_amount = 0
                     # 莽的时候炸了 return 0 莽炸也算炸
-                    return 0
+                    if variable.auto_mark:
+                       # print(f"上一轮结束 莽算炸")
+                        return 0
+                    #else:
+                       # print(f"上一轮还没结束 莽不算炸")
             return closest_multiple_of_500(variable.bet_amount * lose_four)
         if lose_count == 1:
             return closest_multiple_of_500(initial_amount * lose_once)
@@ -415,19 +449,24 @@ def calculate_bet_amount(win_count, lose_count, initial_amount, lose_stop, lose_
         if lose_count == 3:
             return closest_multiple_of_500(variable.bet_amount * lose_three)
 
-deduplicator_h = MessageDeduplicator(time_window=variable.auto_fierce_time_window)
+deduplicator_h = OneTimeExecutor(time_window=variable.auto_fierce_time_window)
 
 def auto_fierce(lose_count):
     # 是否开启自动
     if variable.fierce_bet:
+        # 确保使用最新的时间窗口
+        deduplicator_h.time_window = variable.auto_fierce_time_window
         # 时间窗口1小时执行一次
-        if deduplicator_h.should_process(lose_count):
+        if deduplicator_h.should_execute():
+           # print(f"触发了自动莽")
+            variable.auto_mark = False
             variable.fierce_initial = variable.auto_fierce_initial
             variable.fierce_lose_count = variable.auto_fierce_lose_count
             variable.fierce_limit_count = variable.auto_fierce_limit_count
             variable.fierce_times[0] = variable.auto_fierce_times[0]
             variable.fierce_times[1] = variable.auto_fierce_times[1]
-
+        #else:
+        #    print(f"忽略重复消息（时间窗口内）: {lose_count}")
 def find_combination(target):
     """
     处理押注金额  生成要点击按钮集合
@@ -649,10 +688,13 @@ async def zq_settle(client, event):
         mes += f"""📈 **盈利 {variable.profit} 暂停 {variable.profit_stop} 局 **\n"""
         mes += f"""📈 **本轮盈利 {variable.period_profit}\n📉 押注倍率 {variable.lose_once} / {variable.lose_twice} / {variable.lose_three} / {variable.lose_four} **\n"""
         mes += f"""📈 **赢翻倍局数 {variable.win}**\n"""
-        mes += f"""📈 **莽金额 {variable.fierce_initial}**\n"""
-        mes += f"""📈 **几连开始莽 {variable.fierce_lose_count}**\n"""
-        mes += f"""📈 **莽次数 {variable.fierce_limit_count}**\n"""
-        mes += f"""📈 **莽倍数 {variable.fierce_times[0]} / {variable.fierce_times[1]}**\n\n"""
+        mes += f"""📈 **auto莽 {variable.fierce_bet}**\n"""
+        mes += f"""📈 **时间窗口 {variable.auto_fierce_time_window}**\n"""
+        mes += f"""📈 **几输启动 {variable.auto_Last_time_lose}**\n"""
+        mes += f"""📈 **莽金额 {variable.fierce_initial} / {variable.auto_fierce_initial}**\n"""
+        mes += f"""📈 **几连开始莽 {variable.fierce_lose_count} / {variable.auto_fierce_lose_count}**\n"""
+        mes += f"""📈 **莽次数 {variable.fierce_limit_count} / {variable.auto_fierce_limit_count}**\n"""
+        mes += f"""📈 **莽倍数 {variable.fierce_times[0]} / {variable.fierce_times[1]} / {variable.auto_fierce_times[0]} / {variable.auto_fierce_times[1]}**\n\n"""
         if variable.win_total > 0:
             mes += f"""🎯 **押注次数：{variable.total}\n🏆 胜率：{variable.win_total / variable.total * 100:.2f}%**\n"""
         mes += f"""💰 **收益：{variable.earnings}\n💰 总余额：{variable.balance}**\n"""
