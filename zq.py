@@ -17,14 +17,14 @@ async def zq_user(client, event):
         help_message = """```使用方法：\n
 - st - 启动命令 (st ys_name ) \n
 - res - 重置统计数据 (res)\n
-- set - 设置参数：被炸几次触发、赢利多少触发、炸停止多久、盈利停止多久、手动恢复对局设置为“1” (set 5 1000000 3 5 1)\n
-- ms - 切换模式：0指定反投,1连反,2连追 (ms 1) 设置参数 模式 赢时翻倍局数 ms 2 2 3\n
+- set - 设置参数：炸几次触发、赢利多少触发、炸停止多久、盈利停止多久、重置恢复局数、设置为“1”立即恢复押注(选填) (set 1 1000000 1 1 2)\n
+- ms - 切换模式：0指定反投,1追投,2占比N连追  设置参数 模式 N连追 赢时翻倍局数 ms 2 2 0\n
 - xx - 删除群组消息 (xx)\n
 - top - 显示捐赠排行榜 (top)\n
 - ys - 保存预设策略 (ys yc 30 3 3.0 3.0 3.0 3.0 10000)\n
 - yss - 查看或删除预设 (yss 或 yss dl yc)\n
 - js - 计算预设所需资金 (js ys1)\n
-- m - 猛模式配置 初始金额(默认0相当于不开启猛) 输几次开始猛(默认2次) 猛几次(默认3次) 猛第一倍率(默认3倍) 猛第二倍率(默认2倍)
+- m - 莽模式配置 初始金额(默认0相当于不开启莽) 输几次开始莽(默认4次) 莽几次(默认3次) 莽第一倍率(默认3倍) 莽第二倍率(默认2倍)
 - h - 查看帮助 (help)```"""
         message = await client.send_message(config.group, help_message, parse_mode="markdown")
         asyncio.create_task(delete_later(client, event.chat_id, event.id, 60))
@@ -34,7 +34,7 @@ async def zq_user(client, event):
         if "init" == my[1]:
             variable.fierce_initial = 0
             variable.fierce_lose_count = 4
-            variable.fierce_limit_count = 5
+            variable.fierce_limit_count = 3
             variable.fierce_times[0] = 3.0
             variable.fierce_times[1] = 2.05
         variable.fierce_initial = int(my[1])
@@ -42,7 +42,7 @@ async def zq_user(client, event):
         variable.fierce_limit_count = int(my[3])
         variable.fierce_times[0] = float(my[4])
         variable.fierce_times[1] = float(my[5])
-        mes = f"""启动 猛"""
+        mes = f"""启动 莽"""
         message = await client.send_message(config.group, mes, parse_mode="markdown")
         asyncio.create_task(delete_later(client, event.chat_id, event.id, 10))
         asyncio.create_task(delete_later(client, message.chat_id, message.id, 10))
@@ -623,7 +623,7 @@ async def zq_settle(client, event):
         mes += f"""💥 **炸 {variable.explode} 次 暂停 {variable.stop} 局**\n"""
         mes += f"""📈 **盈利 {variable.profit} 暂停 {variable.profit_stop} 局 **\n"""
         mes += f"""📈 **本轮盈利 {variable.period_profit}\n📉 押注倍率 {variable.lose_once} / {variable.lose_twice} / {variable.lose_three} / {variable.lose_four} **\n"""
-        mes += f"""📈 **赢二倍局数 {variable.win}**\n"""
+        mes += f"""📈 **赢翻倍局数 {variable.win}**\n"""
         mes += f"""📈 **莽金额 {variable.fierce_initial}**\n"""
         mes += f"""📈 **几连开始莽 {variable.fierce_lose_count}**\n"""
         mes += f"""📈 **莽次数 {variable.fierce_limit_count}**\n"""

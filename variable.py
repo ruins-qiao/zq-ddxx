@@ -14,7 +14,7 @@ lose_history = []
 # 输赢历史记录
 a_history = []
 
-# 押注模式  0 = 反投 1 = 预测 2 = 追投
+# 押注模式  0 = 反投 1 = 追投 2 = 占比N追投
 mode= 0
 
 # 输赢变量
@@ -45,6 +45,7 @@ mark = True
 flag = True
 # 暂停开关
 mode_stop = True
+
 # 占比追投 临时变量
 chase = 2
 
@@ -67,15 +68,15 @@ total = 0
 # 记录m1胜利局数
 win_total = 0
 
-# 猛初始金额
+# 莽初始金额
 fierce_initial =0
-# 猛押注金额
+# 莽押注金额
 fierce_amount = 0
-# 猛几次
-fierce_limit_count = 5
-# 输几次开始猛几次
+# 莽几次
+fierce_limit_count = 3
+# 输几次开始莽几次
 fierce_lose_count = 4
-# 猛倍率
+# 莽倍率
 fierce_times = [3.0,2.05]
 
 # 初始金额
