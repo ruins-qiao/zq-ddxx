@@ -46,8 +46,10 @@ flag = True
 # 暂停开关
 mode_stop = True
 
-# 占比追投 临时变量
+# 占比追投 几连追临时变量
 chase = 2
+# 占比追投 数据量
+proportion = 1000
 
 
 i = 1

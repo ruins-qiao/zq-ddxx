@@ -18,7 +18,7 @@ async def zq_user(client, event):
 - st - 启动命令 (st ys_name ) \n
 - res - 重置统计数据 (res)\n
 - set - 设置参数：炸几次触发、赢利多少触发、炸停止多久、盈利停止多久、重置恢复局数、设置为“1”立即恢复押注(选填) (set 1 1000000 1 1 2)\n
-- ms - 切换模式：0指定反投,1追投,2占比N连追  设置参数 模式 N连追 赢时翻倍局数 ms 2 2 0\n
+- ms - 切换模式：0指定反投,1追投,2占比N连追  设置参数 模式 N连追 赢时翻倍局数 ms 2 0  模式为占比追投时需要设置为 ms 2 0 3(几连追) 1000(数据量)\n
 - xx - 删除群组消息 (xx)\n
 - top - 显示捐赠排行榜 (top)\n
 - ys - 保存预设策略 (ys yc 30 3 3.0 3.0 3.0 3.0 10000)\n
@@ -93,11 +93,11 @@ async def zq_user(client, event):
         asyncio.create_task(delete_later(client, message.chat_id, message.id, 10))
         return
     if "ms" == my[0]:
-        if my[1] == 2:
-            if len(my) > 2:
-                variable.chase = int(my[2])
         variable.mode = int(my[1])
-        variable.win = int(my[3])
+        variable.win = int(my[2])
+        if my[1] == 2:
+            variable.chase = int(my[3])
+            variable.proportion = int(my[4])
         mes = f"""设置成功"""
         message = await client.send_message(config.group, mes, parse_mode="markdown")
         asyncio.create_task(delete_later(client, event.chat_id, event.id, 10))
@@ -381,7 +381,7 @@ def next_trend(history):
         return history[-1]
     # 不相同按照占比押注
     # 获取列表总长度
-    total_count = len(history)
+    total_count = len(history[-variable.proportion:])
     # 统计 1 的数量
     ones_count = history.count(1)
     # 计算 1 的占比
