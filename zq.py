@@ -95,7 +95,7 @@ async def zq_user(client, event):
     if "ms" == my[0]:
         variable.mode = int(my[1])
         variable.win = int(my[2])
-        if my[1] == 2:
+        if int(my[1]) == 2:
             variable.chase = int(my[3])
             variable.proportion = int(my[4])
         mes = f"""设置成功"""
