@@ -19,7 +19,7 @@ python3 -m venv venv
 # 激活虚拟环境
 source myenv/bin/activate
 
-# 在虚拟环境中依赖包
+# 在虚拟环境中依赖包 
 pip install telethon 
 
 # 后台运行py文件
