@@ -383,7 +383,7 @@ def next_trend(history):
     # 获取列表总长度
     total_count = len(history[-variable.proportion:])
     # 统计 1 的数量
-    ones_count = history.count(1)
+    ones_count = history[-variable.proportion:].count(1)
     # 计算 1 的占比
     ratio_of_ones = ones_count / total_count
     # 判断占比并返回结果
