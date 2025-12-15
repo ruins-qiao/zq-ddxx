@@ -70,33 +70,6 @@ total = 0
 # 记录m1胜利局数
 win_total = 0
 
-# 莽初始金额
-fierce_initial =0
-# 莽押注金额
-fierce_amount = 0
-# 莽几次
-fierce_limit_count = 3
-# 输几次开始莽几次
-fierce_lose_count = 4
-# 莽倍率
-fierce_times = [3.0,2.0]
-# 自动莽开关
-fierce_bet = False
-# 自动莽初始金额
-auto_fierce_initial =0
-# 自动莽几次
-auto_fierce_limit_count = 3
-# 自动输几次开始莽几次
-auto_fierce_lose_count = 4
-# 自动莽倍率
-auto_fierce_times = [3.0,2.0]
-# 自动莽时间窗口 多久只押注一次
-auto_fierce_time_window = 3600.0
-# 自动莽 上一次连输几次后 开启自动莽
-auto_Last_time_lose = 4
-# 自动莽 标记上一轮还没结束
-auto_mark = True
-
 # 初始金额
 initial_amount = 500
 

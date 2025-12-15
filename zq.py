@@ -24,38 +24,10 @@ async def zq_user(client, event):
 - ys - 保存预设策略 (ys yc 30 3 3.0 3.0 3.0 3.0 10000)\n
 - yss - 查看或删除预设 (yss 或 yss dl yc)\n
 - js - 计算预设所需资金 (js ys1)\n
-- m - 莽模式配置 初始金额(默认0相当于不开启莽) 输几次开始莽(默认4次) 莽几次(默认3次) 莽第一倍率(默认3倍) 莽第二倍率(默认2倍)\n
-莽自动模式 m auto 初始金额(默认0相当于不开启莽) 输几次开始莽(默认4次) 莽几次(默认3次) 莽第一倍率(默认3倍) 莽第二倍率(默认2倍) 多久押注一次(秒) 上一局输多少次触发自动莽 m auto 1 3 3 2 3600 4
 - h - 查看帮助 (help)```"""
         message = await client.send_message(config.group, help_message, parse_mode="markdown")
         asyncio.create_task(delete_later(client, event.chat_id, event.id, 60))
         asyncio.create_task(delete_later(client, message.chat_id, message.id, 60))
-        return
-    if "m" == my[0]:
-        if "auto" == my[1]:
-            variable.fierce_bet = True
-            variable.auto_fierce_initial = int(my[2])
-            variable.auto_fierce_lose_count = int(my[3])
-            variable.auto_fierce_limit_count = int(my[4])
-            variable.auto_fierce_times[0] = float(my[5])
-            variable.auto_fierce_times[1] = float(my[6])
-            variable.auto_fierce_time_window = float(my[7])
-            variable.auto_Last_time_lose = int(my[8])
-            mes = f"""启动 自动莽"""
-            message = await client.send_message(config.group, mes, parse_mode="markdown")
-            asyncio.create_task(delete_later(client, event.chat_id, event.id, 10))
-            asyncio.create_task(delete_later(client, message.chat_id, message.id, 10))
-            return
-        variable.fierce_bet = False
-        variable.fierce_initial = int(my[1])
-        variable.fierce_lose_count = int(my[2])
-        variable.fierce_limit_count = int(my[3])
-        variable.fierce_times[0] = float(my[4])
-        variable.fierce_times[1] = float(my[5])
-        mes = f"""启动 莽"""
-        message = await client.send_message(config.group, mes, parse_mode="markdown")
-        asyncio.create_task(delete_later(client, event.chat_id, event.id, 10))
-        asyncio.create_task(delete_later(client, message.chat_id, message.id, 10))
         return
     if "st" == my[0]:
         yss = query_records(my[1])
@@ -284,7 +256,7 @@ async def zq_bet_on(client, event, deduplicator):
                                                                variable.lose_twice,
                                                                variable.lose_three, variable.lose_four, 1)
                     # 获取要点击的按钮集合
-                    com = find_combination(variable.bet_amount + variable.fierce_amount)
+                    com = find_combination(variable.bet_amount)
                     print(f"本次押注金额：{com}")
                     # 押注
                     if len(com) > 0:
@@ -292,7 +264,7 @@ async def zq_bet_on(client, event, deduplicator):
                         await bet(check, com, event)
                         mes = f"""
                         **⚡ 押注： {"押大" if check else "押小"}
-    💵 金额： {(variable.bet_amount + variable.fierce_amount)}**
+    💵 金额： {variable.bet_amount}**
                         """
                         m = await client.send_message(config.group, mes, parse_mode="markdown")
                         asyncio.create_task(delete_later(client, m.chat_id, m.id, 60))
@@ -412,61 +384,15 @@ def calculate_bet_amount(win_count, lose_count, initial_amount, lose_stop, lose_
             return variable.bet_amount
     else:
         if (lose_count + 1) > lose_stop:
-            variable.fierce_amount = 0
             return 0
-        if lose_count >= variable.auto_Last_time_lose:
-            if i == 1:
-               # print(f"触发自动莽：{lose_count},{variable.auto_Last_time_lose}")
-                auto_fierce(lose_count)
-        else:
-           # print(f"上一轮结束了")
-            variable.auto_mark = True
-        if lose_count >= variable.fierce_lose_count:
-            if i == 1:
-                if (lose_count - variable.fierce_lose_count) < variable.fierce_limit_count:
-                    # 计算猛押注金额
-                    if (lose_count - variable.fierce_lose_count) == 0:
-                        variable.fierce_amount = closest_multiple_of_500(variable.fierce_initial)
-                    elif (lose_count - variable.fierce_lose_count) == 1:
-                        variable.fierce_amount = closest_multiple_of_500(
-                            variable.fierce_amount * variable.fierce_times[0])
-                    else:
-                        variable.fierce_amount = closest_multiple_of_500(
-                            variable.fierce_amount * variable.fierce_times[1])
-                else:
-                    variable.fierce_amount = 0
-                    # 莽的时候炸了 return 0 莽炸也算炸
-                    if variable.auto_mark:
-                       # print(f"上一轮结束 莽算炸")
-                        return 0
-                    #else:
-                       # print(f"上一轮还没结束 莽不算炸")
-            return closest_multiple_of_500(variable.bet_amount * lose_four)
         if lose_count == 1:
             return closest_multiple_of_500(initial_amount * lose_once)
         if lose_count == 2:
             return closest_multiple_of_500(variable.bet_amount * lose_twice)
         if lose_count == 3:
             return closest_multiple_of_500(variable.bet_amount * lose_three)
+        return closest_multiple_of_500(variable.bet_amount * lose_four)
 
-deduplicator_h = OneTimeExecutor(time_window=variable.auto_fierce_time_window)
-
-def auto_fierce(lose_count):
-    # 是否开启自动
-    if variable.fierce_bet:
-        # 确保使用最新的时间窗口
-        deduplicator_h.time_window = variable.auto_fierce_time_window
-        # 时间窗口1小时执行一次
-        if deduplicator_h.should_execute():
-           # print(f"触发了自动莽")
-            variable.auto_mark = False
-            variable.fierce_initial = variable.auto_fierce_initial
-            variable.fierce_lose_count = variable.auto_fierce_lose_count
-            variable.fierce_limit_count = variable.auto_fierce_limit_count
-            variable.fierce_times[0] = variable.auto_fierce_times[0]
-            variable.fierce_times[1] = variable.auto_fierce_times[1]
-        #else:
-        #    print(f"忽略重复消息（时间窗口内）: {lose_count}")
 def find_combination(target):
     """
     处理押注金额  生成要点击按钮集合
@@ -549,22 +475,16 @@ async def zq_settle(client, event):
                 if variable.bet_type == 1:
                     variable.win_total += 1
                     variable.earnings += (int(variable.bet_amount * 0.99))
-                    variable.earnings += (int(variable.fierce_amount * 0.99))
                     variable.period_profit += (int(variable.bet_amount * 0.99))
-                    variable.period_profit += (int(variable.fierce_amount * 0.99))
                     variable.balance += (int(variable.bet_amount * 0.99))
-                    variable.balance += (int(variable.fierce_amount * 0.99))
                     variable.win_count += 1
                     variable.lose_count = 0
                     variable.status = 1
                     variable.lose_history.append(1)
                 else:
                     variable.earnings -= variable.bet_amount
-                    variable.earnings -= variable.fierce_amount
                     variable.period_profit -= variable.bet_amount
-                    variable.period_profit -= variable.fierce_amount
                     variable.balance -= variable.bet_amount
-                    variable.balance -= variable.fierce_amount
                     variable.win_count = 0
                     variable.lose_count += 1
                     variable.status = 0
@@ -573,22 +493,16 @@ async def zq_settle(client, event):
                 if variable.bet_type == 0:
                     variable.win_total += 1
                     variable.earnings += (int(variable.bet_amount * 0.99))
-                    variable.earnings += (int(variable.fierce_amount * 0.99))
                     variable.period_profit += (int(variable.bet_amount * 0.99))
-                    variable.period_profit += (int(variable.fierce_amount * 0.99))
                     variable.balance += (int(variable.bet_amount * 0.99))
-                    variable.balance += (int(variable.fierce_amount * 0.99))
                     variable.win_count += 1
                     variable.lose_count = 0
                     variable.status = 1
                     variable.lose_history.append(1)
                 else:
                     variable.earnings -= variable.bet_amount
-                    variable.earnings -= variable.fierce_amount
                     variable.period_profit -= variable.bet_amount
-                    variable.period_profit -= variable.fierce_amount
                     variable.balance -= variable.bet_amount
-                    variable.balance -= variable.fierce_amount
                     variable.win_count = 0
                     variable.lose_count += 1
                     variable.status = 0
@@ -604,20 +518,10 @@ async def zq_settle(client, event):
                     mes = f"""**💥 本轮炸了收益如下：{variable.period_profit} 灵石**\n"""
                     await client.send_message(config.group, mes, parse_mode="markdown")
                     variable.stop_count = variable.stop
-                    variable.fierce_initial = 0
-                    variable.fierce_lose_count = 4
-                    variable.fierce_limit_count = 3
-                    variable.fierce_times[0] = 3.0
-                    variable.fierce_times[1] = 2.0
                 elif variable.period_profit >= variable.profit:
                     mes = f"""**📈 本轮赢了一共赢得：{variable.period_profit} 灵石**"""
                     await client.send_message(config.group, mes, parse_mode="markdown")
                     variable.stop_count = variable.profit_stop
-                    variable.fierce_initial = 0
-                    variable.fierce_lose_count = 4
-                    variable.fierce_limit_count = 3
-                    variable.fierce_times[0] = 3.0
-                    variable.fierce_times[1] = 2.0
                 else:
                     variable.stop_count = variable.stop
             if variable.stop_count > 0:
@@ -688,20 +592,13 @@ async def zq_settle(client, event):
         mes += f"""📈 **盈利 {variable.profit} 暂停 {variable.profit_stop} 局 **\n"""
         mes += f"""📈 **本轮盈利 {variable.period_profit}\n📉 押注倍率 {variable.lose_once} / {variable.lose_twice} / {variable.lose_three} / {variable.lose_four} **\n"""
         mes += f"""📈 **赢翻倍局数 {variable.win}**\n"""
-        mes += f"""📈 **auto莽 {variable.fierce_bet}**\n"""
-        mes += f"""📈 **时间窗口 {variable.auto_fierce_time_window}**\n"""
-        mes += f"""📈 **几输启动 {variable.auto_Last_time_lose}**\n"""
-        mes += f"""📈 **莽金额 {variable.fierce_initial} / {variable.auto_fierce_initial}**\n"""
-        mes += f"""📈 **几连开始莽 {variable.fierce_lose_count} / {variable.auto_fierce_lose_count}**\n"""
-        mes += f"""📈 **莽次数 {variable.fierce_limit_count} / {variable.auto_fierce_limit_count}**\n"""
-        mes += f"""📈 **莽倍数 {variable.fierce_times[0]} / {variable.fierce_times[1]} / {variable.auto_fierce_times[0]} / {variable.auto_fierce_times[1]}**\n\n"""
         if variable.win_total > 0:
             mes += f"""🎯 **押注次数：{variable.total}\n🏆 胜率：{variable.win_total / variable.total * 100:.2f}%**\n"""
         mes += f"""💰 **收益：{variable.earnings}\n💰 总余额：{variable.balance}**\n"""
         if variable.stop_count >= 1:
             mes += f"""\n\n还剩 {variable.stop_count} 局恢复押注"""
         if variable.bet:
-            mess = f"""**📉 输赢统计： {"赢" if variable.status else "输"} {int((variable.bet_amount * 0.99) + (variable.fierce_amount * 0.99)) if variable.status else (variable.bet_amount + variable.fierce_amount)}\n🎲 结果： {event.pattern_match.group(2)}**"""
+            mess = f"""**📉 输赢统计： {"赢" if variable.status else "输"} {int((variable.bet_amount * 0.99)) if variable.status else (variable.bet_amount)}\n🎲 结果： {event.pattern_match.group(2)}**"""
             m = await client.send_message(config.group, mess, parse_mode="markdown")
             asyncio.create_task(delete_later(client, m.chat_id, m.id, 60))
         variable.message = await client.send_message(config.group, mes, parse_mode="markdown")
