@@ -11,7 +11,7 @@
 ## 安装使用
 ```bash
 # 安装 virtualenv
-sudo apt install python3-venv 
+sudo apt install python3-venv
 
 # 创建虚拟环境
 python3 -m venv venv
