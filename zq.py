@@ -201,6 +201,7 @@ class MessageDeduplicator:
         self.last_message = None
         self.last_timestamp = 0.0
 
+
 class OneTimeExecutor:
     def __init__(self, time_window: float = 3600.0):
         self.time_window = time_window
@@ -226,6 +227,7 @@ class OneTimeExecutor:
         """完全重置"""
         self.execution_time = None
 
+
 async def zq_bet_on(client, event, deduplicator):
     if deduplicator.should_process(event):
         await asyncio.sleep(5)
@@ -248,7 +250,6 @@ async def zq_bet_on(client, event, deduplicator):
                     else:
                         check = next_trend(variable.history)
                     print(f"本次押注：{check}")
-                    variable.i += 1
                     # 获取押注金额 根据连胜局数和底价进行计算
                     variable.bet_amount = calculate_bet_amount(variable.win_count, variable.lose_count,
                                                                variable.initial_amount,
@@ -270,15 +271,15 @@ async def zq_bet_on(client, event, deduplicator):
                         asyncio.create_task(delete_later(client, m.chat_id, m.id, 60))
                         variable.mark = True
                     else:
-                        if variable.mode != 0:
-                            if variable.mark:
-                                variable.explode_count += 1
-                                print("触发停止押注")
-                                variable.mark = False
-                            variable.bet = False
-                            if variable.mode == 1 or variable.mode == 2:
-                                variable.win_count = 0
-                                variable.lose_count = 0
+                        # if variable.mode != 0:
+                        if variable.mark:
+                            variable.explode_count += 1
+                            print("触发停止押注")
+                            variable.mark = False
+                        variable.bet = False
+                        if variable.mode == 1 or variable.mode == 2:
+                            variable.win_count = 0
+                            variable.lose_count = 0
             else:
                 variable.bet = False
         else:
@@ -372,10 +373,8 @@ def predict_next_trend(history):
 def calculate_bet_amount(win_count, lose_count, initial_amount, lose_stop, lose_once, lose_twice, lose_three,
                          lose_four, i):
     if win_count == 0 and lose_count == 0:
-        variable.fierce_amount = 0
         return closest_multiple_of_500(initial_amount)
     elif win_count > 0 and lose_count == 0:
-        variable.fierce_amount = 0
         if win_count == 1:
             return closest_multiple_of_500(initial_amount)
         if 0 < (win_count - 1) < variable.win:
@@ -392,6 +391,7 @@ def calculate_bet_amount(win_count, lose_count, initial_amount, lose_stop, lose_
         if lose_count == 3:
             return closest_multiple_of_500(variable.bet_amount * lose_three)
         return closest_multiple_of_500(variable.bet_amount * lose_four)
+
 
 def find_combination(target):
     """
