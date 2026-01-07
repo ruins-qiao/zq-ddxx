@@ -8,29 +8,52 @@ import re
 import os
 import time
 from typing import Any
+import asyncio
 
+
+# 假设 delete_later, config, variable, query_records 等已经在外部定义
+# 如果没有定义，请确保引入它们
 
 async def zq_user(client, event):
-    my = event.raw_text.split(" ")
-    # Help 命令
-    if "h" == my[0]:
-        help_message = """```使用方法：\n
-- st - 启动命令 (st ys_name ) \n
-- res - 重置统计数据 (res)\n
-- set - 设置参数：炸几次触发、赢利多少触发、炸停止多久、盈利停止多久、重置恢复局数、设置为“1”立即恢复押注(选填) (set 1 1000000 1 1 2)\n
-- ms - 切换模式：0指定反投,1追投,2占比N连追  设置参数 模式 N连追 赢时翻倍局数 ms 2 0  模式为占比追投时需要设置为 ms 2 0 3(几连追) 1000(数据量)\n
-- xx - 删除群组消息 (xx)\n
-- top - 显示捐赠排行榜 (top)\n
-- ys - 保存预设策略 (ys yc 30 3 3.0 3.0 3.0 3.0 10000)\n
-- yss - 查看或删除预设 (yss 或 yss dl yc)\n
-- js - 计算预设所需资金 (js ys1)\n
-- h - 查看帮助 (help)```"""
-        message = await client.send_message(config.group, help_message, parse_mode="markdown")
-        asyncio.create_task(delete_later(client, event.chat_id, event.id, 60))
-        asyncio.create_task(delete_later(client, message.chat_id, message.id, 60))
+    # 1. 使用 split() 不带参数，可以自动处理多个连续空格
+    args = event.raw_text.strip().split()
+    if not args:
         return
-    if "st" == my[0]:
-        yss = query_records(my[1])
+
+    cmd = args[0].lower()  # 统一转小写，防止大小写敏感问题
+
+    # --- 辅助函数：统一发送回执并添加定时删除任务 ---
+    async def reply_temp(text, delay=10, parse_mode="markdown"):
+        try:
+            msg = await client.send_message(config.group, text, parse_mode=parse_mode)
+            # 创建删除任务 (用户消息 + 机器人回复)
+            asyncio.create_task(delete_later(client, event.chat_id, event.id, delay))
+            asyncio.create_task(delete_later(client, msg.chat_id, msg.id, delay))
+        except Exception as e:
+            print(f"发送消息失败: {e}")
+
+    # --- 具体的命令处理逻辑 ---
+
+    async def cmd_help():
+        help_message = """```使用方法：
+- st - 启动命令 (st ys_name )
+- res - 重置统计数据 (res)
+- set - 设置参数：炸几次触发 赢利多少触发 炸停止多久 盈利停止多久 重置恢复局数 [可选:立即恢复(1)] (set 1 1000000 1 1 2)
+- ms - 切换模式：模式(0反投,1追投,2占比) 赢翻倍局数 [可选:占比追投参数] (ms 2 0 3 1000)
+- cl - 删除群组消息 (cl)
+- top - 显示捐赠排行榜 (top)
+- ys - 保存预设策略 (ys yc 30 3 3.0 3.0 3.0 3.0 10000)
+- yss - 查看或删除预设 (yss 或 yss dl yc)
+- js - 计算预设所需资金 (js ys1)
+- h - 查看帮助```"""
+        await reply_temp(help_message, delay=60)
+
+    async def cmd_start():
+        yss = query_records(args[1])
+        if not yss:
+            await reply_temp("❌ 策略不存在")
+            return
+
         variable.continuous = yss["count"]
         variable.lose_stop = yss["field2"]
         variable.lose_once = yss["field3"]
@@ -38,132 +61,134 @@ async def zq_user(client, event):
         variable.lose_three = yss["field5"]
         variable.lose_four = yss["field6"]
         variable.initial_amount = yss["amount"]
-        mes = f"""启动 {yss["type"]}"""
-        message = await client.send_message(config.group, mes, parse_mode="markdown")
-        asyncio.create_task(delete_later(client, event.chat_id, event.id, 10))
-        asyncio.create_task(delete_later(client, message.chat_id, message.id, 10))
-        return
-    if "res" == my[0]:
+        await reply_temp(f"""启动 {yss["type"]}""")
+
+    async def cmd_reset():
         variable.win_total = 0
         variable.total = 0
         variable.earnings = 0
-        mes = f"""重置成功"""
-        message = await client.send_message(config.group, mes, parse_mode="markdown")
-        asyncio.create_task(delete_later(client, event.chat_id, event.id, 10))
-        asyncio.create_task(delete_later(client, message.chat_id, message.id, 10))
-        return
-    if "set" == my[0]:
-        variable.explode = int(my[1])
-        variable.profit = int(my[2])
-        variable.stop = int(my[3])
-        variable.profit_stop = int(my[4])
-        if len(my) > 5:
-            variable.stop_count = int(my[5])
-        mes = f"""设置成功"""
-        message = await client.send_message(config.group, mes, parse_mode="markdown")
-        asyncio.create_task(delete_later(client, event.chat_id, event.id, 10))
-        asyncio.create_task(delete_later(client, message.chat_id, message.id, 10))
-        return
-    if "ms" == my[0]:
-        variable.mode = int(my[1])
-        variable.win = int(my[2])
-        if int(my[1]) == 2:
-            variable.chase = int(my[3])
-            variable.proportion = int(my[4])
-        mes = f"""设置成功"""
-        message = await client.send_message(config.group, mes, parse_mode="markdown")
-        asyncio.create_task(delete_later(client, event.chat_id, event.id, 10))
-        asyncio.create_task(delete_later(client, message.chat_id, message.id, 10))
-        return
-    if "xx" == my[0]:
-        group = [-1002262543959, -1001833464786]
-        for g in group:
+        await reply_temp("重置成功")
+
+    async def cmd_set():
+        variable.explode = int(args[1])
+        variable.profit = int(args[2])
+        variable.stop = int(args[3])
+        variable.profit_stop = int(args[4])
+        if len(args) > 5:
+            variable.stop_count = int(args[5])
+        await reply_temp("设置成功")
+
+    async def cmd_mode():
+        variable.mode = int(args[1])
+        variable.win = int(args[2])
+        if int(args[1]) == 2:
+            variable.chase = int(args[3])
+            variable.proportion = int(args[4])
+        await reply_temp("设置成功")
+
+    async def cmd_clean():
+        target_groups = [-1002262543959, -1001833464786]
+        for g in target_groups:
+            # 使用列表推导式优化，或直接传递迭代器(视Telethon版本而定)
+            # 注意：iter_messages 是异步生成器
             messages = [msg.id async for msg in client.iter_messages(g, from_user='me')]
-            await client.delete_messages(g, messages)
+            if messages:
+                await client.delete_messages(g, messages)
+        # 这里只删除触发命令的那条消息，时间短一点
         asyncio.create_task(delete_later(client, event.chat_id, event.id, 3))
-        return
-    if "ye" == my[0]:
-        variable.balance = int(my[1])
-        mes = f"""设置成功"""
-        message = await client.send_message(config.group, mes, parse_mode="markdown")
-        asyncio.create_task(delete_later(client, event.chat_id, event.id, 10))
-        asyncio.create_task(delete_later(client, message.chat_id, message.id, 10))
-    if "top" == my[0]:
+
+    async def cmd_balance():
+        variable.balance = int(args[1])
+        await reply_temp("余额设置成功")
+
+    async def cmd_top():
         users = count_users()
-        if users > 0:
-            all_users = query_users(config.zq_bot, order="DESC")
-            # 生成捐赠榜文本
-            donation_list = f"```当前{config.name}个人总榜Top: {len(all_users)} 为\n"
-            # 添加总榜 Top 5
-            for i, item in enumerate(all_users[:20], start=1):
-                name = item['name']
-                count = item['count']
-                amount = item['amount']
-                count1 = item['neg_count']
-                amount1 = item['neg_amount']
-                donation_list += f"     总榜Top {i}: {name} 大佬共赏赐小弟: {count} 次,共计: {format_number(int(amount))} 爱心\n{config.name} 共赏赐 {name} 小弟： {count1} 次,共计： {format_number(int(amount1))} 爱心\n"
-            donation_list += f"```"
-            message = await client.send_message(config.group, donation_list)
-            asyncio.create_task(delete_later(client, event.chat_id, event.id, 60))
-            asyncio.create_task(delete_later(client, message.chat_id, message.id, 60))
+        if users <= 0:
+            await reply_temp("**暂无记录**")
             return
-        else:
-            message = await client.send_message(config.group, f"**暂无记录**")
-            asyncio.create_task(delete_later(client, event.chat_id, event.id, 10))
-            asyncio.create_task(delete_later(client, message.chat_id, message.id, 10))
-    if "ys" == my[0]:
-        ys = query_records(my[1])
-        if ys is not None:
-            mes = update_record(my[1], int(my[2]), int(my[3]), float(my[4]), float(my[5]), float(my[6]), float(my[7]),
-                                int(my[8]))
-        else:
-            mes = add_record(my[1], int(my[2]), int(my[3]), float(my[4]), float(my[5]), float(my[6]), float(my[7]),
-                             int(my[8]))
-        message = await client.send_message(config.group, mes, parse_mode="markdown")
-        asyncio.create_task(delete_later(client, event.chat_id, event.id, 10))
-        asyncio.create_task(delete_later(client, message.chat_id, message.id, 10))
-        return
-    if "yss" == my[0]:
-        if len(my) > 1:
-            if "dl" == my[1]:
-                mes = delete_record(my[2])
-                message = await client.send_message(config.group, mes, parse_mode="markdown")
-                asyncio.create_task(delete_later(client, event.chat_id, event.id, 10))
-                asyncio.create_task(delete_later(client, message.chat_id, message.id, 10))
-                return
-        if count_records() > 0:
-            yss = query_records()
-            mes = "```"
-            mes += "\n\n".join(
-                f"{ys["type"]}: {ys["count"]}局反投 押注{ys["field2"]}次 金额 {ys["amount"]}\n倍率 {ys["field3"]} / {ys["field4"]} / {ys["field5"]} / {ys["field6"]}"
-                for ys in yss
+
+        all_users = query_users(config.zq_bot, order="DESC")
+        donation_list = [f"```当前{config.name}个人总榜Top: {len(all_users)} 为"]
+
+        # 优化字符串拼接
+        for i, item in enumerate(all_users[:20], start=1):
+            donation_list.append(
+                f"     总榜Top {i}: {item['name']} 大佬共赏赐小弟: {item['count']} 次,共计: {format_number(int(item['amount']))} 爱心\n"
+                f"{config.name} 共赏赐 {item['name']} 小弟： {item['neg_count']} 次,共计： {format_number(int(item['neg_amount']))} 爱心"
             )
-            mes += "```"
-            message = await client.send_message(config.group, mes, parse_mode="markdown")
-            asyncio.create_task(delete_later(client, event.chat_id, event.id, 60))
-            asyncio.create_task(delete_later(client, message.chat_id, message.id, 60))
-        else:
-            mes = """**暂无预设记录**"""
-            message = await client.send_message(config.group, mes, parse_mode="markdown")
-            asyncio.create_task(delete_later(client, event.chat_id, event.id, 10))
-            asyncio.create_task(delete_later(client, message.chat_id, message.id, 10))
-        return
-    if "js" == my[0]:
-        ys = query_records(my[1])
+        donation_list.append("```")
+        await reply_temp("\n".join(donation_list), delay=60)
+
+    async def cmd_ys():
+        # 参数转换比较多，直接传参
+        name = args[1]
+        params = [int(args[2]), int(args[3]), float(args[4]), float(args[5]), float(args[6]), float(args[7]),
+                  int(args[8])]
+
+        ys = query_records(name)
         if ys is not None:
-            mes = "累计需要资金："
-            js = calculate_losses(ys["field2"], ys["amount"], ys["field3"], ys["field4"], ys["field5"], ys["field6"])
-            mes += str(int(js))
+            mes = update_record(name, *params)  # 使用解包传递参数
+        else:
+            mes = add_record(name, *params)
+        await reply_temp(mes)
+
+    async def cmd_yss():
+        if len(args) > 2 and args[1] == "dl":
+            mes = delete_record(args[2])
+            await reply_temp(mes)
+            return
+
+        if count_records() > 0:
+            yss_data = query_records()
+            mes = "```\n" + "\n\n".join(
+                f"{ys['type']}: {ys['count']}局反投 押注{ys['field2']}次 金额 {ys['amount']}\n"
+                f"倍率 {ys['field3']} / {ys['field4']} / {ys['field5']} / {ys['field6']}"
+                for ys in yss_data
+            ) + "\n```"
+            await reply_temp(mes, delay=60)
+        else:
+            await reply_temp("**暂无预设记录**")
+
+    async def cmd_js():
+        ys = query_records(args[1])
+        if ys is not None:
+            js_val = calculate_losses(ys["field2"], ys["amount"], ys["field3"], ys["field4"], ys["field5"],
+                                      ys["field6"])
+            mes = f"累计需要资金：{int(js_val)}"
         else:
             mes = "策略不存在"
-        message = await client.send_message(config.group, mes, parse_mode="markdown")
-        asyncio.create_task(delete_later(client, event.chat_id, event.id, 10))
-        asyncio.create_task(delete_later(client, message.chat_id, message.id, 10))
-        return
+        await reply_temp(mes)
+
+    # --- 命令路由表 ---
+    handlers = {
+        "h": cmd_help,
+        "help": cmd_help,
+        "st": cmd_start,
+        "res": cmd_reset,
+        "set": cmd_set,
+        "ms": cmd_mode,
+        "cl": cmd_clean,
+        "ye": cmd_balance,
+        "top": cmd_top,
+        "ys": cmd_ys,
+        "yss": cmd_yss,
+        "js": cmd_js
+    }
+
+    # --- 执行逻辑 ---
+    if cmd in handlers:
+        try:
+            await handlers[cmd]()
+        except (IndexError, ValueError) as e:
+            # 捕获参数缺失(IndexError)或类型错误(ValueError)
+            await reply_temp(f"❌ 命令执行错误: 参数缺失或格式不对。\nError: {str(e)}")
+        except Exception as e:
+            # 捕获其他未知错误
+            await reply_temp(f"❌ 系统错误: {str(e)}")
 
 
 class MessageDeduplicator:
-    def __init__(self, time_window: float = 5.0):
+    def __init__(self, time_window: float = 50.0):
         """
         初始化消息去重器
         :param time_window: 时间窗口（秒），默认为5秒
@@ -200,32 +225,6 @@ class MessageDeduplicator:
         """重置去重器状态"""
         self.last_message = None
         self.last_timestamp = 0.0
-
-
-class OneTimeExecutor:
-    def __init__(self, time_window: float = 3600.0):
-        self.time_window = time_window
-        self.execution_time = None  # None表示从未执行
-
-    def should_execute(self) -> bool:
-        current_time = time.time()
-
-        if self.execution_time is None:
-            # 第一次执行
-            self.execution_time = current_time
-            return True
-
-        # 检查是否超过时间窗口
-        if current_time - self.execution_time >= self.time_window:
-            # 重置：更新时间但不改变状态，相当于新一轮的"第一次"
-            self.execution_time = current_time
-            return True
-
-        return False
-
-    def reset(self):
-        """完全重置"""
-        self.execution_time = None
 
 
 async def zq_bet_on(client, event, deduplicator):
