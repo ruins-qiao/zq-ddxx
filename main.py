@@ -27,7 +27,7 @@ async def zq_red_packet_handler(event):
     events.NewMessage(chats=config.zq_group, pattern=r"\[近 40 次结果\]\[由近及远\]\[0 小 1 大\].*",
                       from_users=config.zq_bot))
 async def zq_bet_on_handler(event):
-    await zq.zq_bet_on(client, event, deduplicator)
+    await zq.zq_bet_on(client, event, deduplicator,functions)
 
 
 @client.on(

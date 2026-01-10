@@ -188,7 +188,7 @@ async def zq_user(client, event):
 
 
 class MessageDeduplicator:
-    def __init__(self, time_window: float = 50.0):
+    def __init__(self, time_window: float = 30.0):
         """
         初始化消息去重器
         :param time_window: 时间窗口（秒），默认为5秒
@@ -227,66 +227,55 @@ class MessageDeduplicator:
         self.last_timestamp = 0.0
 
 
-async def zq_bet_on(client, event, deduplicator):
+async def zq_bet_on(client, event, deduplicator,functions):
     if deduplicator.should_process(event):
         await asyncio.sleep(5)
-        if variable.balance > 0 and (variable.balance - calculate_bet_amount(variable.win_count, variable.lose_count,
-                                                                             variable.initial_amount,
-                                                                             variable.lose_stop, variable.lose_once,
-                                                                             variable.lose_twice,
-                                                                             variable.lose_three,
-                                                                             variable.lose_four, 0)) >= 0:
-            if variable.bet_on or (variable.mode == 1 and variable.mode_stop) or (
-                    variable.mode == 2 and variable.mode_stop):
-                # 判断是否是开盘信息
-                if event.reply_markup:
-                    print(f"开始押注！")
-                    # 获取压大还是小
-                    if variable.mode == 1:
-                        check = z_next_trend(variable.history)
-                    elif variable.mode == 0:
-                        check = predict_next_trend(variable.history)
-                    else:
-                        check = next_trend(variable.history)
-                    print(f"本次押注：{check}")
-                    # 获取押注金额 根据连胜局数和底价进行计算
-                    variable.bet_amount = calculate_bet_amount(variable.win_count, variable.lose_count,
-                                                               variable.initial_amount,
-                                                               variable.lose_stop, variable.lose_once,
-                                                               variable.lose_twice,
-                                                               variable.lose_three, variable.lose_four, 1)
-                    # 获取要点击的按钮集合
-                    com = find_combination(variable.bet_amount)
-                    print(f"本次押注金额：{com}")
-                    # 押注
-                    if len(com) > 0:
-                        variable.bet = True
-                        await bet(check, com, event)
-                        mes = f"""
+        if variable.bet_on or (variable.mode == 1 and variable.mode_stop) or (
+                variable.mode == 2 and variable.mode_stop):
+            # 判断是否是开盘信息
+            if event.reply_markup:
+                print(f"开始押注！")
+                # 获取压大还是小
+                if variable.mode == 1:
+                    check = z_next_trend(variable.history)
+                elif variable.mode == 0:
+                    check = predict_next_trend(variable.history)
+                else:
+                    check = next_trend(variable.history)
+                print(f"本次押注：{check}")
+                # 获取押注金额 根据连胜局数和底价进行计算
+                variable.bet_amount = calculate_bet_amount(variable.win_count, variable.lose_count,
+                                                           variable.initial_amount,
+                                                           variable.lose_stop, variable.lose_once,
+                                                           variable.lose_twice,
+                                                           variable.lose_three, variable.lose_four, 1)
+                # 获取要点击的按钮集合
+                com = find_combination(variable.bet_amount)
+                print(f"本次押注金额：{com}")
+                # 押注
+                if len(com) > 0:
+                    variable.bet = True
+                    await bet(client,check, com, event,functions)
+                    mes = f"""
                         **⚡ 押注： {"押大" if check else "押小"}
     💵 金额： {variable.bet_amount}**
                         """
-                        m = await client.send_message(config.group, mes, parse_mode="markdown")
-                        asyncio.create_task(delete_later(client, m.chat_id, m.id, 60))
-                        variable.mark = True
-                    else:
-                        # if variable.mode != 0:
-                        if variable.mark:
-                            variable.explode_count += 1
-                            print("触发停止押注")
-                            variable.mark = False
-                        variable.bet = False
-                        if variable.mode == 1 or variable.mode == 2:
-                            variable.win_count = 0
-                            variable.lose_count = 0
-            else:
-                variable.bet = False
+                    m = await client.send_message(config.group, mes, parse_mode="markdown")
+                    asyncio.create_task(delete_later(client, m.chat_id, m.id, 60))
+                    variable.mark = True
+                else:
+                    # if variable.mode != 0:
+                    if variable.mark:
+                        variable.explode_count += 1
+                        print("触发停止押注")
+                        variable.mark = False
+                    variable.bet = False
+                    if variable.mode == 1 or variable.mode == 2:
+                        variable.win_count = 0
+                        variable.lose_count = 0
         else:
             variable.bet = False
-            variable.win_count = 0
-            variable.lose_count = 0
-            m = await client.send_message(config.group, f"**没有足够资金进行押注 请重置余额**")
-            asyncio.create_task(delete_later(client, m.chat_id, m.id, 60))
+
     else:
         print(f"忽略重复消息（时间窗口内）: {event.id}")
 
@@ -424,18 +413,107 @@ def closest_multiple_of_500(n):
     return round(n / 500) * 500
 
 
-async def bet(check, com, event):
+async def bet(client,check, com, event,functions):
     variable.total += 1
     if check:
         for c in com:
             await event.click(variable.big_button[c])  # 点击按钮
-            await asyncio.sleep(1.5)
+            await asyncio.sleep(1.0)
         variable.bet_type = 1
     else:
         for c in com:
-            await event.click(variable.small_button[c])  # 点击按钮
-            await asyncio.sleep(1.5)
+            await event.click(variable.small_button[c])  # 点击按钮.
+            await asyncio.sleep(1.0)
         variable.bet_type = 0
+
+
+def whether_bet_on(win_times, lose_times):
+    if win_times >= variable.continuous or lose_times >= variable.continuous and len(
+            variable.history) >= variable.continuous:
+        variable.bet_on = True
+    else:
+        variable.bet_on = False
+        if variable.mode == 0:
+            variable.win_count = 0
+            variable.lose_count = 0
+
+
+def count_sequences(records):
+    # 初始化统计字典
+    loss_counts = {}
+    win_counts = {}
+
+    # 边界处理：空记录
+    if not records:
+        print("**🔴 连“输”结果：\n🟢 连“赢”结果：**")
+        return
+
+    # 初始化计数变量
+    current = records[0]
+    count = 1
+
+    # 遍历记录序列
+    for i in range(1, len(records)):
+        if records[i] == current:
+            count += 1
+        else:
+            # 根据当前状态更新对应字典
+            if current == 0:
+                loss_counts[count] = loss_counts.get(count, 0) + 1
+            elif current == 1:
+                win_counts[count] = win_counts.get(count, 0) + 1
+            current = records[i]
+            count = 1
+
+    # 处理最后一组连续记录
+    if current == 0:
+        loss_counts[count] = loss_counts.get(count, 0) + 1
+    elif current == 1:
+        win_counts[count] = win_counts.get(count, 0) + 1
+
+    # 按连续次数降序排序
+    sorted_loss = sorted(loss_counts.items(), key=lambda x: x[0], reverse=True)
+    sorted_win = sorted(win_counts.items(), key=lambda x: x[0], reverse=True)
+
+    # 格式化输出结果
+    output = "🔴 **连“输”结果：**\n"
+    for length, times in sorted_loss:
+        output += f"{length} 连“输” : {times} 次\n"
+
+    output += "🟢 **连“赢”结果：**\n"
+    for length, times in sorted_win:
+        output += f"{length} 连“赢” : {times} 次\n"
+
+    return output.rstrip()
+
+
+def count_consecutive(data):
+    """统计连续出现的次数"""
+    counts = {"大": defaultdict(int), "小": defaultdict(int)}
+    current_value = data[0]  # 记录当前数字（1 或 0）
+    current_count = 1  # 当前连胜的次数
+
+    for i in range(1, len(data)):
+        if data[i] == current_value:
+            current_count += 1
+        else:
+            # 记录当前连胜的次数
+            label = "大" if current_value == 1 else "小"
+            counts[label][current_count] += 1
+            # 更新计数
+            current_value = data[i]
+            current_count = 1
+
+    # 处理最后一组连续数字
+    label = "大" if current_value == 1 else "小"
+    counts[label][current_count] += 1
+
+    return counts
+
+
+# 格式化输出
+def format_counts(counts, label):
+    return os.linesep.join([f"{key} 连“{label}” : {counts[key]} 次" for key in sorted(counts.keys(), reverse=True)])
 
 
 async def zq_settle(client, event):
@@ -639,95 +717,6 @@ async def qz_red_packet(client, event, functions):
                                 return
                         await asyncio.sleep(1)
                         i += 1
-
-
-def whether_bet_on(win_times, lose_times):
-    if win_times >= variable.continuous or lose_times >= variable.continuous and len(
-            variable.history) >= variable.continuous:
-        variable.bet_on = True
-    else:
-        variable.bet_on = False
-        if variable.mode == 0:
-            variable.win_count = 0
-            variable.lose_count = 0
-
-
-def count_sequences(records):
-    # 初始化统计字典
-    loss_counts = {}
-    win_counts = {}
-
-    # 边界处理：空记录
-    if not records:
-        print("**🔴 连“输”结果：\n🟢 连“赢”结果：**")
-        return
-
-    # 初始化计数变量
-    current = records[0]
-    count = 1
-
-    # 遍历记录序列
-    for i in range(1, len(records)):
-        if records[i] == current:
-            count += 1
-        else:
-            # 根据当前状态更新对应字典
-            if current == 0:
-                loss_counts[count] = loss_counts.get(count, 0) + 1
-            elif current == 1:
-                win_counts[count] = win_counts.get(count, 0) + 1
-            current = records[i]
-            count = 1
-
-    # 处理最后一组连续记录
-    if current == 0:
-        loss_counts[count] = loss_counts.get(count, 0) + 1
-    elif current == 1:
-        win_counts[count] = win_counts.get(count, 0) + 1
-
-    # 按连续次数降序排序
-    sorted_loss = sorted(loss_counts.items(), key=lambda x: x[0], reverse=True)
-    sorted_win = sorted(win_counts.items(), key=lambda x: x[0], reverse=True)
-
-    # 格式化输出结果
-    output = "🔴 **连“输”结果：**\n"
-    for length, times in sorted_loss:
-        output += f"{length} 连“输” : {times} 次\n"
-
-    output += "🟢 **连“赢”结果：**\n"
-    for length, times in sorted_win:
-        output += f"{length} 连“赢” : {times} 次\n"
-
-    return output.rstrip()
-
-
-def count_consecutive(data):
-    """统计连续出现的次数"""
-    counts = {"大": defaultdict(int), "小": defaultdict(int)}
-    current_value = data[0]  # 记录当前数字（1 或 0）
-    current_count = 1  # 当前连胜的次数
-
-    for i in range(1, len(data)):
-        if data[i] == current_value:
-            current_count += 1
-        else:
-            # 记录当前连胜的次数
-            label = "大" if current_value == 1 else "小"
-            counts[label][current_count] += 1
-            # 更新计数
-            current_value = data[i]
-            current_count = 1
-
-    # 处理最后一组连续数字
-    label = "大" if current_value == 1 else "小"
-    counts[label][current_count] += 1
-
-    return counts
-
-
-# 格式化输出
-def format_counts(counts, label):
-    return os.linesep.join([f"{key} 连“{label}” : {counts[key]} 次" for key in sorted(counts.keys(), reverse=True)])
 
 
 async def zq_shoot(client, event):
