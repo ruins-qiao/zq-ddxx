@@ -8,18 +8,33 @@ import config
 import zq
 import logging
 
+# --- 配置日志 ---
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler("bot_debug.log", encoding='utf-8'),
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger(__name__)
+
+# 屏蔽 telethon 库的 INFO 日志 (例如: Got difference for channel...)
+logging.getLogger('telethon').setLevel(logging.WARNING)
+
 # 2. 创建 Telegram 客户端
 client = TelegramClient(config.user_session, config.api_id, config.api_hash)
 # 程序启动时 创建数据库
 zq.create_table_if_not_exists()
 # 创建去重器
-deduplicator = zq.MessageDeduplicator(time_window=5.0)
+deduplicator = zq.MessageDeduplicator(time_window=30.0)
 
 
 @client.on(
     events.NewMessage(chats=config.zq_group, pattern=r"内容: (.*)\n灵石: .*\n剩余: .*\n大善人: (.*)",
                       from_users=config.zq_bot))
 async def zq_red_packet_handler(event):
+    logger.info("检测到红包消息，准备抢红包...")
     await zq.qz_red_packet(client, event, functions)
 
 
@@ -27,33 +42,38 @@ async def zq_red_packet_handler(event):
     events.NewMessage(chats=config.zq_group, pattern=r"\[近 40 次结果\]\[由近及远\]\[0 小 1 大\].*",
                       from_users=config.zq_bot))
 async def zq_bet_on_handler(event):
+    logger.info("检测到走势图消息，准备分析押注...")
     await zq.zq_bet_on(client, event, deduplicator,functions)
 
 
 @client.on(
     events.NewMessage(chats=config.zq_group, pattern=r"已结算: 结果为 (\d+) ([大|小])", from_users=config.zq_bot))
 async def zq_settle_handler(event):
+    logger.info(f"检测到结算消息: {event.raw_text.splitlines()[0]}")
     await zq.zq_settle(client, event)
 
 
 @client.on(
     events.NewMessage(chats=config.group))
 async def zq_user_handler(event):
+    # 只有当消息可能是命令时才记录，避免日志爆炸
+    # logger.info(f"收到监控群组消息: {event.raw_text}")
     await zq.zq_user(client, event)
 
 
 @client.on(
     events.NewMessage(chats=config.zq_group, pattern=r"转账成功.*", from_users=config.zq_bot))
 async def zq_shoot_handler(event):
+    logger.info("检测到转账成功消息")
     await zq.zq_shoot(client, event)
 
 
 
 
 # 启动客户端
-print("正在连接到 Telegram...")
+logger.info("正在连接到 Telegram...")
 client.start()
-print("客户端已启动，正在监听指定群组消息...")
+logger.info("客户端已启动，正在监听指定群组消息...")
 # ================== 新增代码开始 ==================
 # # --- 1. 配置日志 (新增) ---
 # # 这会自动创建一个名为 bot_debug.log 的文件

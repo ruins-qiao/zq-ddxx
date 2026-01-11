@@ -3,16 +3,37 @@ import aiohttp
 import variable
 import config
 from collections import defaultdict
-import asyncio
 import re
 import os
 import time
 from typing import Any
 import asyncio
+import logging
+
+# 配置日志
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+logger = logging.getLogger(__name__)
 
 
 # 假设 delete_later, config, variable, query_records 等已经在外部定义
 # 如果没有定义，请确保引入它们
+
+async def reply_temp(client, event, text, delay=10, parse_mode="markdown", delete_trigger=True):
+    """统一发送回执并添加定时删除任务"""
+    try:
+        # logger.info(f"正在回复: {text.replace(os.linesep, ' ')[:50]}...")
+        msg = await client.send_message(config.group, text, parse_mode=parse_mode)
+        # 创建删除任务 (用户消息 + 机器人回复)
+        if delete_trigger and event:
+            asyncio.create_task(delete_later(client, event.chat_id, event.id, delay))
+        asyncio.create_task(delete_later(client, msg.chat_id, msg.id, delay))
+    except Exception as e:
+        logger.error(f"❌ 发送消息失败: {e}")
+
 
 async def zq_user(client, event):
     # 1. 使用 split() 不带参数，可以自动处理多个连续空格
@@ -22,72 +43,50 @@ async def zq_user(client, event):
 
     cmd = args[0].lower()  # 统一转小写，防止大小写敏感问题
 
-    # --- 辅助函数：统一发送回执并添加定时删除任务 ---
-    async def reply_temp(text, delay=10, parse_mode="markdown"):
-        try:
-            msg = await client.send_message(config.group, text, parse_mode=parse_mode)
-            # 创建删除任务 (用户消息 + 机器人回复)
-            asyncio.create_task(delete_later(client, event.chat_id, event.id, delay))
-            asyncio.create_task(delete_later(client, msg.chat_id, msg.id, delay))
-        except Exception as e:
-            print(f"发送消息失败: {e}")
-
     # --- 具体的命令处理逻辑 ---
 
     async def cmd_help():
         help_message = """```使用方法：
-- st - 启动命令 (st ys_name )
+- start - 启动押注
+- stop - 停止押注
+- st - 设置策略 (st ys_name )
 - res - 重置统计数据 (res)
-- set - 设置参数：炸几次触发 赢利多少触发 炸停止多久 盈利停止多久 重置恢复局数 [可选:立即恢复(1)] (set 1 1000000 1 1 2)
-- ms - 切换模式：模式(0反投,1追投,2占比) 赢翻倍局数 [可选:占比追投参数] (ms 2 0 3 1000)
+- ms - 占比追投参数 (ms 3 1000)
 - cl - 删除群组消息 (cl)
 - top - 显示捐赠排行榜 (top)
-- ys - 保存预设策略 (ys yc 30 3 3.0 3.0 3.0 3.0 10000)
+- ys - 保存预设策略 (ys yc 3 3.0 3.0 3.0 3.0 10000)
 - yss - 查看或删除预设 (yss 或 yss dl yc)
 - js - 计算预设所需资金 (js ys1)
 - h - 查看帮助```"""
-        await reply_temp(help_message, delay=60)
+        await reply_temp(client, event, help_message, delay=60)
 
-    async def cmd_start():
+    async def cmd_cl():
         yss = query_records(args[1])
         if not yss:
-            await reply_temp("❌ 策略不存在")
+            await reply_temp(client, event, "❌ 策略不存在")
             return
 
-        variable.continuous = yss["count"]
         variable.lose_stop = yss["field2"]
         variable.lose_once = yss["field3"]
         variable.lose_twice = yss["field4"]
         variable.lose_three = yss["field5"]
         variable.lose_four = yss["field6"]
         variable.initial_amount = yss["amount"]
-        await reply_temp(f"""启动 {yss["type"]}""")
+        await reply_temp(client, event, f"""设置策略 {yss["type"]}""")
 
     async def cmd_reset():
         variable.win_total = 0
         variable.total = 0
         variable.earnings = 0
-        await reply_temp("重置成功")
-
-    async def cmd_set():
-        variable.explode = int(args[1])
-        variable.profit = int(args[2])
-        variable.stop = int(args[3])
-        variable.profit_stop = int(args[4])
-        if len(args) > 5:
-            variable.stop_count = int(args[5])
-        await reply_temp("设置成功")
+        await reply_temp(client, event, "重置成功")
 
     async def cmd_mode():
-        variable.mode = int(args[1])
-        variable.win = int(args[2])
-        if int(args[1]) == 2:
-            variable.chase = int(args[3])
-            variable.proportion = int(args[4])
-        await reply_temp("设置成功")
+        variable.chase = int(args[1])
+        variable.proportion = int(args[2])
+        await reply_temp(client, event, "设置成功")
 
     async def cmd_clean():
-        target_groups = [-1002262543959, -1001833464786]
+        target_groups = config.zq_group
         for g in target_groups:
             # 使用列表推导式优化，或直接传递迭代器(视Telethon版本而定)
             # 注意：iter_messages 是异步生成器
@@ -97,14 +96,10 @@ async def zq_user(client, event):
         # 这里只删除触发命令的那条消息，时间短一点
         asyncio.create_task(delete_later(client, event.chat_id, event.id, 3))
 
-    async def cmd_balance():
-        variable.balance = int(args[1])
-        await reply_temp("余额设置成功")
-
     async def cmd_top():
         users = count_users()
         if users <= 0:
-            await reply_temp("**暂无记录**")
+            await reply_temp(client, event, "**暂无记录**")
             return
 
         all_users = query_users(config.zq_bot, order="DESC")
@@ -117,37 +112,37 @@ async def zq_user(client, event):
                 f"{config.name} 共赏赐 {item['name']} 小弟： {item['neg_count']} 次,共计： {format_number(int(item['neg_amount']))} 爱心"
             )
         donation_list.append("```")
-        await reply_temp("\n".join(donation_list), delay=60)
+        await reply_temp(client, event, "\n".join(donation_list), delay=60)
 
     async def cmd_ys():
         # 参数转换比较多，直接传参
         name = args[1]
-        params = [int(args[2]), int(args[3]), float(args[4]), float(args[5]), float(args[6]), float(args[7]),
-                  int(args[8])]
+        params = [int(args[2]), float(args[3]), float(args[4]), float(args[5]), float(args[6]),
+                  int(args[7])]
 
         ys = query_records(name)
         if ys is not None:
             mes = update_record(name, *params)  # 使用解包传递参数
         else:
             mes = add_record(name, *params)
-        await reply_temp(mes)
+        await reply_temp(client, event, mes)
 
     async def cmd_yss():
         if len(args) > 2 and args[1] == "dl":
             mes = delete_record(args[2])
-            await reply_temp(mes)
+            await reply_temp(client, event, mes)
             return
 
         if count_records() > 0:
             yss_data = query_records()
             mes = "```\n" + "\n\n".join(
-                f"{ys['type']}: {ys['count']}局反投 押注{ys['field2']}次 金额 {ys['amount']}\n"
+                f"{ys['type']}: 押注{ys['field2']}次 金额 {ys['amount']}\n"
                 f"倍率 {ys['field3']} / {ys['field4']} / {ys['field5']} / {ys['field6']}"
                 for ys in yss_data
             ) + "\n```"
-            await reply_temp(mes, delay=60)
+            await reply_temp(client, event, mes, delay=60)
         else:
-            await reply_temp("**暂无预设记录**")
+            await reply_temp(client, event, "**暂无预设记录**")
 
     async def cmd_js():
         ys = query_records(args[1])
@@ -157,38 +152,56 @@ async def zq_user(client, event):
             mes = f"累计需要资金：{int(js_val)}"
         else:
             mes = "策略不存在"
-        await reply_temp(mes)
+        await reply_temp(client, event, mes)
+
+    async def cmd_start():
+        variable.bet_on = True
+        await reply_temp(client, event, "启动押注")
+
+    async def cmd_stop():
+        variable.bet_on = False
+        await reply_temp(client, event, "停止押注")
 
     # --- 命令路由表 ---
     handlers = {
         "h": cmd_help,
         "help": cmd_help,
-        "st": cmd_start,
+        "st": cmd_cl,
         "res": cmd_reset,
-        "set": cmd_set,
         "ms": cmd_mode,
         "cl": cmd_clean,
-        "ye": cmd_balance,
         "top": cmd_top,
         "ys": cmd_ys,
         "yss": cmd_yss,
-        "js": cmd_js
+        "js": cmd_js,
+        "start": cmd_start,
+        "stop": cmd_stop
     }
 
     # --- 执行逻辑 ---
     if cmd in handlers:
+        # --- 日志：记录接收到的命令 ---
+        try:
+            sender = await event.get_sender()
+            user_name = sender.first_name if sender else "Unknown"
+            logger.info(f"收到命令: {cmd} | 来自: {user_name} ({event.sender_id}) | 参数: {event.raw_text}")
+        except Exception as e:
+            logger.error(f"日志记录出错: {e}")
         try:
             await handlers[cmd]()
+            logger.info(f"✅ 命令 {cmd} 执行成功")
         except (IndexError, ValueError) as e:
             # 捕获参数缺失(IndexError)或类型错误(ValueError)
-            await reply_temp(f"❌ 命令执行错误: 参数缺失或格式不对。\nError: {str(e)}")
+            logger.warning(f"⚠️ 命令 {cmd} 参数错误: {e}")
+            await reply_temp(client, event, f"❌ 命令执行错误: 参数缺失或格式不对。\nError: {str(e)}")
         except Exception as e:
             # 捕获其他未知错误
-            await reply_temp(f"❌ 系统错误: {str(e)}")
+            logger.error(f"❌ 命令 {cmd} 发生异常: {e}", exc_info=True)
+            await reply_temp(client, event, f"❌ 系统错误: {str(e)}")
 
 
 class MessageDeduplicator:
-    def __init__(self, time_window: float = 30.0):
+    def __init__(self, time_window: float = 5.0):
         """
         初始化消息去重器
         :param time_window: 时间窗口（秒），默认为5秒
@@ -227,74 +240,42 @@ class MessageDeduplicator:
         self.last_timestamp = 0.0
 
 
-async def zq_bet_on(client, event, deduplicator,functions):
+async def zq_bet_on(client, event, deduplicator, functions):
     if deduplicator.should_process(event):
-        await asyncio.sleep(5)
-        if variable.bet_on or (variable.mode == 1 and variable.mode_stop) or (
-                variable.mode == 2 and variable.mode_stop):
+        if variable.bet_on:
             # 判断是否是开盘信息
             if event.reply_markup:
-                print(f"开始押注！")
+                # logger.info(f"开始押注！")
                 # 获取压大还是小
-                if variable.mode == 1:
-                    check = z_next_trend(variable.history)
-                elif variable.mode == 0:
-                    check = predict_next_trend(variable.history)
-                else:
-                    check = next_trend(variable.history)
-                print(f"本次押注：{check}")
+                check = next_trend(variable.history)
+                logger.info(f"本次押注：{"大" if check == 1 else "小"}")
                 # 获取押注金额 根据连胜局数和底价进行计算
                 variable.bet_amount = calculate_bet_amount(variable.win_count, variable.lose_count,
                                                            variable.initial_amount,
                                                            variable.lose_stop, variable.lose_once,
                                                            variable.lose_twice,
-                                                           variable.lose_three, variable.lose_four, 1)
+                                                           variable.lose_three, variable.lose_four)
+                logger.info(f"本次押注金额：{variable.bet_amount}")
+                variable.total += 1
+                if check == 0:
+                    variable.bet_type = 0
+                else:
+                    variable.bet_type = 1
                 # 获取要点击的按钮集合
                 com = find_combination(variable.bet_amount)
-                print(f"本次押注金额：{com}")
                 # 押注
-                if len(com) > 0:
-                    variable.bet = True
-                    await bet(client,check, com, event,functions)
-                    mes = f"""
-                        **⚡ 押注： {"押大" if check else "押小"}
-    💵 金额： {variable.bet_amount}**
-                        """
-                    m = await client.send_message(config.group, mes, parse_mode="markdown")
-                    asyncio.create_task(delete_later(client, m.chat_id, m.id, 60))
-                    variable.mark = True
-                else:
-                    # if variable.mode != 0:
-                    if variable.mark:
-                        variable.explode_count += 1
-                        print("触发停止押注")
-                        variable.mark = False
-                    variable.bet = False
-                    if variable.mode == 1 or variable.mode == 2:
-                        variable.win_count = 0
-                        variable.lose_count = 0
+                variable.bet = True
+                await bet(check, com, event)
+                mes = f"""
+                            **⚡ 押注： {"押大" if check else "押小"}
+        💵 金额： {variable.bet_amount}**
+                            """
+                await reply_temp(client, event, mes, 60, delete_trigger=False)
         else:
             variable.bet = False
 
     else:
-        print(f"忽略重复消息（时间窗口内）: {event.id}")
-
-
-# 3.3 异步获取账户余额
-async def fetch_account_balance():
-    """异步获取账户余额，失败时返回旧值"""
-    headers = {
-        "Cookie": config.ZHUQUE_COOKIE,
-        "X-Csrf-Token": config.ZHUQUE_X_CSRF
-    }
-    try:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(config.ZHUQUE_API_URL, headers=headers,
-                                   timeout=aiohttp.ClientTimeout(total=5)) as response:
-                data = await response.json()
-                return int(data.get("data", {}).get("bonus", variable.balance))
-    except Exception:
-        return variable.balance
+        logger.info(f"忽略重复消息（时间窗口内）: {event.id}")
 
 
 def calculate_losses(cycles, initial, rate1, rate2, rate3, rate4):
@@ -322,13 +303,6 @@ def calculate_losses(cycles, initial, rate1, rate2, rate3, rate4):
     return total
 
 
-def z_next_trend(history):
-    """
-    追投
-    """
-    return history[-1]
-
-
 def next_trend(history):
     """
     占比追投
@@ -342,8 +316,10 @@ def next_trend(history):
         return history[-1]
     # 不相同按照占比押注
     # 获取列表总长度
+    history = [1]
     total_count = len(history[-variable.proportion:])
     # 统计 1 的数量
+
     ones_count = history[-variable.proportion:].count(1)
     # 计算 1 的占比
     ratio_of_ones = ones_count / total_count
@@ -354,24 +330,15 @@ def next_trend(history):
         return 1
 
 
-def predict_next_trend(history):
-    return 0 if history[-1] else 1
-
-
 def calculate_bet_amount(win_count, lose_count, initial_amount, lose_stop, lose_once, lose_twice, lose_three,
-                         lose_four, i):
-    if win_count == 0 and lose_count == 0:
+                         lose_four):
+    if win_count >= 0 and lose_count == 0:
         return closest_multiple_of_500(initial_amount)
-    elif win_count > 0 and lose_count == 0:
-        if win_count == 1:
-            return closest_multiple_of_500(initial_amount)
-        if 0 < (win_count - 1) < variable.win:
-            return closest_multiple_of_500(variable.bet_amount * 2)
-        if (win_count - 1) >= variable.win:
-            return variable.bet_amount
     else:
         if (lose_count + 1) > lose_stop:
-            return 0
+            variable.win_count = 0
+            variable.lose_count = 0
+            return closest_multiple_of_500(initial_amount)
         if lose_count == 1:
             return closest_multiple_of_500(initial_amount * lose_once)
         if lose_count == 2:
@@ -413,29 +380,47 @@ def closest_multiple_of_500(n):
     return round(n / 500) * 500
 
 
-async def bet(client,check, com, event,functions):
-    variable.total += 1
-    if check:
-        for c in com:
-            await event.click(variable.big_button[c])  # 点击按钮
-            await asyncio.sleep(1.0)
-        variable.bet_type = 1
-    else:
-        for c in com:
-            await event.click(variable.small_button[c])  # 点击按钮.
-            await asyncio.sleep(1.0)
-        variable.bet_type = 0
+async def bet(check, com, event):
+    # 根据 check 决定使用哪组按钮映射 (True=大, False=小)
+    button_map = variable.big_button if check else variable.small_button
+    direction = "大" if check else "小"
 
+    for c in com:
+        # 每个金额最大重试次数
+        max_retries = 5
+        for attempt in range(max_retries):
+            try:
+                # event.click 返回 BotCallbackAnswer 对象
+                # 使用 wait_for 增加超时控制，防止请求一直卡住
+                res = await asyncio.wait_for(event.click(button_map[c]), timeout=10.0)
 
-def whether_bet_on(win_times, lose_times):
-    if win_times >= variable.continuous or lose_times >= variable.continuous and len(
-            variable.history) >= variable.continuous:
-        variable.bet_on = True
-    else:
-        variable.bet_on = False
-        if variable.mode == 0:
-            variable.win_count = 0
-            variable.lose_count = 0
+                # 提取返回信息并记录日志
+                msg_text = res.message.replace('\n', ' ') if (
+                            res and hasattr(res, 'message') and res.message) else "无返回文本"
+                # logger.info(f"押注[{direction}] 金额:{c} -> 返回: {msg_text}")
+
+                # 1. 押注成功：跳出重试循环，继续下一个金额
+                if "押注成功" in msg_text:
+                    break
+
+                # 2. 操作过快/繁忙：等待后重试
+                if "操作过快" in msg_text or "系统繁忙" in msg_text:
+                    logger.warning(f"检测到繁忙/过快，1秒后重试...")
+                    await asyncio.sleep(1)
+                    continue
+
+                # 3. 其他明确的错误（如余额不足、封盘）：不重试，跳出当前金额
+                break
+
+            except asyncio.TimeoutError:
+                logger.warning(f"押注[{direction}] 金额:{c} 第{attempt + 1}次请求超时，正在重试...")
+                await asyncio.sleep(1)
+            except Exception as e:
+                logger.error(f"押注[{direction}] 金额:{c} 第{attempt + 1}次失败: {e}，正在重试...")
+                await asyncio.sleep(1)
+
+        # 按钮点击间隔
+        await asyncio.sleep(1.0)
 
 
 def count_sequences(records):
@@ -445,7 +430,7 @@ def count_sequences(records):
 
     # 边界处理：空记录
     if not records:
-        print("**🔴 连“输”结果：\n🟢 连“赢”结果：**")
+        logger.info("**🔴 连“输”结果：\n🟢 连“赢”结果：**")
         return
 
     # 初始化计数变量
@@ -517,182 +502,220 @@ def format_counts(counts, label):
 
 
 async def zq_settle(client, event):
-    if event.pattern_match:
-        # 存储历史记录
-        if len(variable.history) >= 1000:
-            del variable.history[:5]
-        if event.pattern_match.group(2) == variable.consequence:
-            variable.win_times += 1
-            variable.lose_times = 0
-            variable.history.append(1 if event.pattern_match.group(2) == variable.consequence else 0)
-            variable.a_history.append(1 if event.pattern_match.group(2) == variable.consequence else 0)
-        else:
-            variable.win_times = 0
-            variable.lose_times += 1
-            variable.history.append(1 if event.pattern_match.group(2) == variable.consequence else 0)
-            variable.a_history.append(1 if event.pattern_match.group(2) == variable.consequence else 0)
+    if not event.pattern_match:
+        return
 
-        if len(variable.a_history) >= 1000:
-            mes = f"""
-📊 **近期 1000 次连输连赢次数\n{os.linesep.join(
+    # --- 0. 快照当前押注状态 ---
+    # 关键修复：在进入任何 await 之前，将全局变量保存为局部变量
+    # 防止在结算过程中，新的一局开始导致 variable.bet_amount 等参数被修改
+    current_bet = variable.bet
+    current_bet_amount = variable.bet_amount
+    current_bet_type = variable.bet_type
+
+    # --- 1. 解析开奖结果 ---
+    # 获取开奖结果字符串 (假设 group(2) 是 "大" 或 "小")
+    result_str = event.pattern_match.group(2)
+    # 判断是否为 "大" (1), 否则为 "小" (0)
+    is_big = (result_str == variable.consequence)
+    result_int = 1 if is_big else 0
+
+    # --- 2. 结算押注逻辑 (优先级最高) ---
+    if current_bet:
+        # 判断输赢: 开奖结果(1/0) 是否等于 押注类型(1/0)
+        # 使用快照的 current_bet_type
+        is_win = (result_int == current_bet_type)
+
+        if is_win:
+            variable.win_total += 1
+            # 计算利润 (扣除 1% 手续费)
+            # 使用快照的 current_bet_amount
+            profit = int(current_bet_amount * 0.99)
+            variable.earnings += profit
+            variable.balance += profit
+
+            variable.win_count += 1
+            variable.lose_count = 0
+
+            variable.status = 1  # 1 表示赢
+            variable.lose_history.append(1)
+        else:
+            # 输
+            variable.earnings -= current_bet_amount
+            variable.balance -= current_bet_amount
+
+            variable.win_count = 0
+            variable.lose_count += 1
+
+            variable.status = 0  # 0 表示输
+            variable.lose_history.append(0)
+    else:
+        # 未押注，记录状态为 3
+        variable.lose_history.append(3)
+
+    # 维护 lose_history 长度
+    if len(variable.lose_history) > 1000:
+        variable.lose_history.pop(0)
+
+    # --- 3. 更新基础统计 (连大/连小) ---
+    if is_big:
+        variable.win_times += 1
+        variable.lose_times = 0
+    else:
+        variable.win_times = 0
+        variable.lose_times += 1
+
+    # --- 4. 更新历史记录列表 ---
+    variable.history.append(result_int)
+    variable.a_history.append(result_int)
+
+    # 维护 history 长度 (保持约 1000 条)
+    if len(variable.history) > 1000:
+        variable.history.pop(0)
+
+    # 处理 a_history (每 1000 局发送一次完整走势)
+    if len(variable.a_history) >= 1000:
+        try:
+            history_str = os.linesep.join(
                 " ".join(map(str, variable.a_history[i:i + 20]))
                 for i in range(0, len(variable.a_history), 20)
-            )}"""
+            )
+            mes = f"📊 **近期 1000 次走势记录**\n{history_str}"
             await client.send_message(config.group, mes, parse_mode="markdown")
+        except Exception as e:
+            logger.error(f"发送历史走势失败: {e}")
+        finally:
             variable.a_history.clear()
-        # 存储输赢历史记录
-        if len(variable.lose_history) >= 1000:
-            del variable.lose_history[:5]
 
-        # 统计连大连小次数
-        whether_bet_on(variable.win_times, variable.lose_times)
+    # --- 5. 定时发送统计面板 (每 10 局) ---
+    if len(variable.history) > 3 and len(variable.history) % 10 == 0:
+        # 同步余额
+        variable.balance = await fetch_account_balance()
 
-        if variable.bet:
-            if event.pattern_match.group(2) == variable.consequence:
-                if variable.bet_type == 1:
-                    variable.win_total += 1
-                    variable.earnings += (int(variable.bet_amount * 0.99))
-                    variable.period_profit += (int(variable.bet_amount * 0.99))
-                    variable.balance += (int(variable.bet_amount * 0.99))
-                    variable.win_count += 1
-                    variable.lose_count = 0
-                    variable.status = 1
-                    variable.lose_history.append(1)
-                else:
-                    variable.earnings -= variable.bet_amount
-                    variable.period_profit -= variable.bet_amount
-                    variable.balance -= variable.bet_amount
-                    variable.win_count = 0
-                    variable.lose_count += 1
-                    variable.status = 0
-                    variable.lose_history.append(0)
-            else:
-                if variable.bet_type == 0:
-                    variable.win_total += 1
-                    variable.earnings += (int(variable.bet_amount * 0.99))
-                    variable.period_profit += (int(variable.bet_amount * 0.99))
-                    variable.balance += (int(variable.bet_amount * 0.99))
-                    variable.win_count += 1
-                    variable.lose_count = 0
-                    variable.status = 1
-                    variable.lose_history.append(1)
-                else:
-                    variable.earnings -= variable.bet_amount
-                    variable.period_profit -= variable.bet_amount
-                    variable.balance -= variable.bet_amount
-                    variable.win_count = 0
-                    variable.lose_count += 1
-                    variable.status = 0
-                    variable.lose_history.append(0)
+        # 批量删除旧消息
+        messages_to_delete = []
+        if variable.message1: messages_to_delete.append(variable.message1)
+        if variable.message3: messages_to_delete.append(variable.message3)
+        if variable.message4: messages_to_delete.append(variable.message4)
 
-        else:
-            variable.lose_history.append(3)
+        if messages_to_delete:
+            try:
+                await client.delete_messages(config.group, messages_to_delete)
+            except Exception as e:
+                logger.error(f"删除旧统计消息失败: {e}")
+            variable.message1 = None
+            variable.message3 = None
+            variable.message4 = None
 
-        if variable.explode_count >= variable.explode or variable.period_profit >= variable.profit:
-            if variable.flag:
-                variable.flag = False
-                if variable.explode_count >= variable.explode:
-                    mes = f"""**💥 本轮炸了收益如下：{variable.period_profit} 灵石**\n"""
-                    await client.send_message(config.group, mes, parse_mode="markdown")
-                    variable.stop_count = variable.stop
-                elif variable.period_profit >= variable.profit:
-                    mes = f"""**📈 本轮赢了一共赢得：{variable.period_profit} 灵石**"""
-                    await client.send_message(config.group, mes, parse_mode="markdown")
-                    variable.stop_count = variable.profit_stop
-                else:
-                    variable.stop_count = variable.stop
-            if variable.stop_count > 0:
-                variable.stop_count -= 1
-                variable.bet_on = False
-                variable.mode_stop = False
-            else:
-                variable.explode_count = 0
-                variable.period_profit = 0
-                variable.mode_stop = True
-                variable.flag = True
-                variable.win_count = 0
-                variable.lose_count = 0
-                mes = f"""恢复押注"""
-                message = await client.send_message(config.group, mes, parse_mode="markdown")
-                asyncio.create_task(delete_later(client, message.chat_id, message.id, 30))
-
-        # 获取统计结果
-        if len(variable.history) > 3:
-            if len(variable.history) % 10 == 0:
-                variable.balance = await fetch_account_balance()
-                if variable.message1 is not None:
-                    await variable.message1.delete()
-                if variable.message3 is not None:
-                    await variable.message3.delete()
-                if variable.message4 is not None:
-                    await variable.message4.delete()
-                result_counts = count_consecutive(variable.history)
-                # 创建消息
-                mes = f"""
-                📊 **最近 1000 局：**
+        # 发送新统计
+        try:
+            # 1000局统计
+            result_counts_1000 = count_consecutive(variable.history)
+            mes1 = f"""
+📊 **最近 1000 局：**
 🔴 **连“小”结果：**
-{format_counts(result_counts["小"], "小")}
+{format_counts(result_counts_1000["小"], "小")}
 🟢 **连“大”结果：**
-{format_counts(result_counts["大"], "大")}
-                """
-                variable.message1 = await client.send_message(config.group, mes, parse_mode="markdown")
-                result_counts = count_consecutive(variable.history[-200::])
-                # 创建消息
-                mes = f"""
-                📊 **最近 200 局：**
+{format_counts(result_counts_1000["大"], "大")}
+"""
+            variable.message1 = await client.send_message(config.group, mes1, parse_mode="markdown")
+
+            # 200局统计
+            result_counts_200 = count_consecutive(variable.history[-200:])
+            mes3 = f"""
+📊 **最近 200 局：**
 🔴 **连“小”结果：**
-{format_counts(result_counts["小"], "小")}
+{format_counts(result_counts_200["小"], "小")}
 🟢 **连“大”结果：**
-{format_counts(result_counts["大"], "大")}
-                 """
-                variable.message3 = await client.send_message(config.group, mes, parse_mode="markdown")
-                result_mes = count_sequences(variable.lose_history)
-                variable.message4 = await client.send_message(config.group, result_mes, parse_mode="markdown")
-        if variable.message is not None:
+{format_counts(result_counts_200["大"], "大")}
+"""
+            variable.message3 = await client.send_message(config.group, mes3, parse_mode="markdown")
+
+            # 输赢走势
+            result_mes = count_sequences(variable.lose_history)
+            variable.message4 = await client.send_message(config.group, result_mes, parse_mode="markdown")
+        except Exception as e:
+            logger.error(f"发送统计面板失败: {e}")
+
+    # --- 6. 发送本局输赢通知 (仅在押注时) ---
+    if current_bet:
+        win_str = "赢" if variable.status else "输"
+        # 使用快照的 current_bet_amount
+        amount_str = str(int(current_bet_amount * 0.99)) if variable.status else str(current_bet_amount)
+
+        mess = f"""**📉 输赢统计： {win_str} {amount_str}
+    🎲 结果： {result_str}**"""
+
+        await reply_temp(client, event, mess, delay=60, delete_trigger=False)
+
+    # --- 7. 发送每局结算信息 ---
+    # 删除上一局的结算消息
+    if variable.message:
+        try:
             await variable.message.delete()
-        reversed_data = ["✅" if x == 1 else "❌" for x in variable.history[-40::][::-1]]  # 倒序列表
-        # reversed_data = variable.history[-200::][::-1]  # 倒序列表
-        mes = f"""
-        📊 **近期 40 次结果**（由近及远）\n✅：大（1）  ❌：小（0）\n{os.linesep.join(
-            " ".join(map(str, reversed_data[i:i + 10]))
-            for i in range(0, len(reversed_data), 10)
-        )}\n\n———————————————\n🎯 **策略设定**\n"""
-        if variable.mode == 0:
-            mes += f"""🎰 **押注模式 反投**\n🔄 **{variable.continuous} 连反压**\n"""
-        elif variable.mode == 1:
-            mes += f"""🎰 **押注模式 预测**\n"""
-        else:
-            mes += f"""🎰 **押注模式 追投**\n"""
-        mes += f"""💰 **初始金额：{variable.initial_amount}**\n"""
-        mes += f"""⏹ **押注 {variable.lose_stop} 次停止**\n"""
-        mes += f"""💥 **炸 {variable.explode} 次 暂停 {variable.stop} 局**\n"""
-        mes += f"""📈 **盈利 {variable.profit} 暂停 {variable.profit_stop} 局 **\n"""
-        mes += f"""📈 **本轮盈利 {variable.period_profit}\n📉 押注倍率 {variable.lose_once} / {variable.lose_twice} / {variable.lose_three} / {variable.lose_four} **\n"""
-        mes += f"""📈 **赢翻倍局数 {variable.win}**\n"""
-        if variable.win_total > 0:
-            mes += f"""🎯 **押注次数：{variable.total}\n🏆 胜率：{variable.win_total / variable.total * 100:.2f}%**\n"""
-        mes += f"""💰 **收益：{variable.earnings}\n💰 总余额：{variable.balance}**\n"""
-        if variable.stop_count >= 1:
-            mes += f"""\n\n还剩 {variable.stop_count} 局恢复押注"""
-        if variable.bet:
-            mess = f"""**📉 输赢统计： {"赢" if variable.status else "输"} {int((variable.bet_amount * 0.99)) if variable.status else (variable.bet_amount)}\n🎲 结果： {event.pattern_match.group(2)}**"""
-            m = await client.send_message(config.group, mess, parse_mode="markdown")
-            asyncio.create_task(delete_later(client, m.chat_id, m.id, 60))
+        except Exception:
+            pass
+
+    # 构建结算面板内容
+    reversed_data = ["✅" if x == 1 else "❌" for x in variable.history[-40:][::-1]]
+
+    mes = f"""
+📊 **近期 40 次结果**（由近及远）
+✅：大（1）  ❌：小（0）
+{os.linesep.join(" ".join(reversed_data[i:i + 10]) for i in range(0, len(reversed_data), 10))}
+
+———————————————
+"""
+    mes += f"""🎯 **策略设定**
+💰 **初始金额：{variable.initial_amount}**
+⏹ **押注 {variable.lose_stop} 次停止**
+📉 ** 押注倍率 {variable.lose_once} / {variable.lose_twice} / {variable.lose_three} / {variable.lose_four} **
+🎯 ** {variable.chase}连追投 / 数据量：{variable.proportion} **\n
+"""
+
+    if variable.win_total > 0:
+        win_rate = (variable.win_total / variable.total * 100) if variable.total > 0 else 0
+        mes += f"""🎯 **押注次数：{variable.total}**
+🏆 **胜率：{win_rate:.2f}%**\n"""
+
+    mes += f"""💰 **收益：{variable.earnings}**
+💰 **总余额：{variable.balance}**"""
+
+    # 发送结算面板
+    try:
         variable.message = await client.send_message(config.group, mes, parse_mode="markdown")
-        # 根据是否押注来统计 胜率和押注局数
+    except Exception as e:
+        logger.error(f"发送结算面板失败: {e}")
+
+
+
+# 3.3 异步获取账户余额
+async def fetch_account_balance():
+    """异步获取账户余额，失败时返回旧值"""
+    headers = {
+        "Cookie": config.ZHUQUE_COOKIE,
+        "X-Csrf-Token": config.ZHUQUE_X_CSRF
+    }
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(config.ZHUQUE_API_URL, headers=headers,
+                                   timeout=aiohttp.ClientTimeout(total=5)) as response:
+                data = await response.json()
+                return int(data.get("data", {}).get("bonus", variable.balance))
+    except Exception:
+        return variable.balance
 
 
 async def qz_red_packet(client, event, functions):
     if event.reply_markup:
-        print("消息包含按钮！")
+        logger.info("消息包含按钮！")
 
         # 遍历按钮
         for row in event.reply_markup.rows:
             for button in row.buttons:
                 if hasattr(button, 'data'):  # 内联按钮
-                    print(f"发现内联按钮：{button.text}, 数据：{button.data}")
+                    logger.info(f"发现内联按钮：{button.text}, 数据：{button.data}")
                 else:  # 普通按钮
-                    print(f"发现普通按钮：{button.text}")
+                    logger.info(f"发现普通按钮：{button.text}")
                     # 点击第一个按钮（假设是内联按钮）
                 i = 0
                 while i < 30:
@@ -708,12 +731,12 @@ async def qz_red_packet(client, event, functions):
                                 # 匹配 "已获得 xxx 灵石"
                                 bonus = re.search(r"已获得 (\d+) 灵石", response.message).group(1)
                                 await client.send_message(config.group, f"🎉 抢到红包{bonus}灵石！")
-                                print("你成功领取了灵石！")
+                                logger.info("你成功领取了灵石！")
                                 return
                             elif re.search("不能重复领取", response.message):
                                 # 匹配 "不能重复领取"
                                 await client.send_message(config.group, f"⚠️ 抢到红包，但是没有获取到灵石数量！")
-                                print("不能重复领取的提示")
+                                logger.info("不能重复领取的提示")
                                 return
                         await asyncio.sleep(1)
                         i += 1
@@ -761,7 +784,7 @@ async def zq_shoot(client, event):
                 amount = 0
                 if match:
                     amount = match.group(1)
-                print(f"收到来自他人的转账人id:{user_id}  名称：{user_name}   金额：{amount}")
+                logger.info(f"收到来自他人的转账人id:{user_id}  名称：{user_name}   金额：{amount}")
                 # 查询用户数据
                 user = query_users(event.sender_id, user_id)
                 if user is not None:
@@ -849,9 +872,9 @@ def create_table_if_not_exists():
                     PRIMARY KEY (bot_id, user_id)
                 )
             ''')
-            print("表 'users' 已创建")
+            logger.info("表 'users' 已创建")
         else:
-            print("表 'users' 已存在，无需创建")
+            logger.info("表 'users' 已存在，无需创建")
         # 检查表是否存在，不存在则创建
     with sqlite3.connect(YS_DATA_FILE) as conn:
         cursor = conn.cursor()
@@ -860,7 +883,6 @@ def create_table_if_not_exists():
             cursor.execute('''
                 CREATE TABLE ys_data (
                     type TEXT PRIMARY KEY,
-                    count INTEGER,
                     field2 INTEGER,
                     field3 REAL,
                     field4 REAL,
@@ -869,9 +891,9 @@ def create_table_if_not_exists():
                     amount INTEGER
                 )
             ''')
-            print("表 'ys_data' 已创建")
+            logger.info("表 'ys_data' 已创建")
         else:
-            print("表 'ys_data' 已存在，无需创建")
+            logger.info("表 'ys_data' 已存在，无需创建")
 
 
 data = {
@@ -895,7 +917,7 @@ def init_database():
             VALUES (?, ?, ?, ?, ?, ?, ?)
         ''', users_data)
         conn.commit()
-    print("数据初始化完成，数据条数:", len(users_data))
+    logger.info(f"数据初始化完成，数据条数: {len(users_data)}")
 
 
 # 添加新记录
@@ -907,7 +929,7 @@ def add_user(bot_id, user_id, name, amount=0.0, count=0, neg_amount=0.0, neg_cou
             VALUES (?, ?, ?, ?, ?, ?, ?)
         ''', (bot_id, user_id, name, float(amount), count, float(neg_amount), neg_count))
         conn.commit()
-    print(f"已添加用户: {name} (Bot ID: {bot_id}, User ID: {user_id})")
+    logger.info(f"已添加用户: {name} (Bot ID: {bot_id}, User ID: {user_id})")
 
 
 # 更新用户数据
@@ -939,11 +961,11 @@ def update_user(bot_id, user_id, name=None, amount=None, count=None, neg_amount=
             cursor.execute(query, params)
             conn.commit()
             if cursor.rowcount > 0:
-                print(f"已更新用户 (Bot ID: {bot_id}, User ID: {user_id})")
+                logger.info(f"已更新用户 (Bot ID: {bot_id}, User ID: {user_id})")
             else:
-                print(f"未找到用户 (Bot ID: {bot_id}, User ID: {user_id})")
+                logger.info(f"未找到用户 (Bot ID: {bot_id}, User ID: {user_id})")
         else:
-            print("没有提供更新数据")
+            logger.info("没有提供更新数据")
 
 
 # 查询所有用户或根据 bot_id 和 user_id 查询
@@ -985,13 +1007,13 @@ def count_users():
 
 
 # 添加新记录
-def add_record(type_id, count, field2, field3, field4, field5, field6, amount):
+def add_record(type_id, field2, field3, field4, field5, field6, amount):
     with sqlite3.connect(YS_DATA_FILE) as conn:
         cursor = conn.cursor()
         cursor.execute('''
-            INSERT OR IGNORE INTO ys_data (type, count, field2, field3, field4, field5, field6, amount)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (type_id, count, field2, float(field3), float(field4), float(field5), float(field6), int(amount)))
+            INSERT OR IGNORE INTO ys_data (type, field2, field3, field4, field5, field6, amount)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        ''', (type_id, field2, float(field3), float(field4), float(field5), float(field6), int(amount)))
         conn.commit()
     return f"已添加：{type_id} 预设"
 
@@ -1009,15 +1031,12 @@ def delete_record(type_id):
 
 
 # 更新记录
-def update_record(type_id, count=None, field2=None, field3=None, field4=None, field5=None, field6=None, amount=None):
+def update_record(type_id, field2=None, field3=None, field4=None, field5=None, field6=None, amount=None):
     with sqlite3.connect(YS_DATA_FILE) as conn:
         cursor = conn.cursor()
         updates = []
         params = []
 
-        if count is not None:
-            updates.append("count = ?")
-            params.append(count)
         if field2 is not None:
             updates.append("field2 = ?")
             params.append(field2)
