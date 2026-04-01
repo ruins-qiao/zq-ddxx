@@ -1,3 +1,4 @@
+import math
 import sqlite3
 import aiohttp
 import variable
@@ -296,8 +297,9 @@ def calculate_losses(cycles, initial, rate1, rate2, rate3, rate4):
 
         # 更新押注金额
         current_bet = closest_multiple_of_500(base_bet)
+        if i == 10:
+            return current_bet
 
-    return total
 
 
 def next_trend(history):
@@ -366,16 +368,16 @@ def find_combination(target):
         return None  # 如果无法拼凑，返回 None
 
 
+
 def closest_multiple_of_500(n):
     """
-    返回最接近给定数值的500的倍数。
+    返回向上进位到最接近的500的倍数。
 
     :param n: 输入的数值
-    :return: 最接近的500的倍数
+    :return: 向上进位后的500的倍数
     """
-    # 四舍五入到最近的500倍数
-    return round(n / 500) * 500
-
+    # 向上取整到下一个500的倍数
+    return math.ceil(n / 500) * 500
 
 async def bet(check, com, event):
     # 根据 check 决定使用哪组按钮映射 (True=大, False=小)
