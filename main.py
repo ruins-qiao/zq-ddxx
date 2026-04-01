@@ -1,9 +1,9 @@
 from telethon import TelegramClient, events, functions
-import asyncio
-from datetime import datetime, timedelta
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from apscheduler.triggers.cron import CronTrigger
-import pytz
+# import asyncio
+# from datetime import datetime, timedelta
+# from apscheduler.schedulers.asyncio import AsyncIOScheduler
+# from apscheduler.triggers.cron import CronTrigger
+# import pytz
 import config
 import zq
 import logging
@@ -34,7 +34,7 @@ deduplicator = zq.MessageDeduplicator(time_window=30.0)
     events.NewMessage(chats=config.zq_group, pattern=r"内容: (.*)\n灵石: .*\n剩余: .*\n大善人: (.*)",
                       from_users=config.zq_bot))
 async def zq_red_packet_handler(event):
-    logger.info("检测到红包消息，准备抢红包...")
+    # logger.info("检测到红包消息，准备抢红包...")
     await zq.qz_red_packet(client, event, functions)
 
 
@@ -42,14 +42,14 @@ async def zq_red_packet_handler(event):
     events.NewMessage(chats=config.zq_group, pattern=r"\[近 40 次结果\]\[由近及远\]\[0 小 1 大\].*",
                       from_users=config.zq_bot))
 async def zq_bet_on_handler(event):
-    logger.info("检测到走势图消息，准备分析押注...")
+    # logger.info("检测到走势图消息，准备分析押注...")
     await zq.zq_bet_on(client, event, deduplicator,functions)
 
 
 @client.on(
     events.NewMessage(chats=config.zq_group, pattern=r"已结算: 结果为 (\d+) ([大|小])", from_users=config.zq_bot))
 async def zq_settle_handler(event):
-    logger.info(f"检测到结算消息: {event.raw_text.splitlines()[0]}")
+    # logger.info(f"检测到结算消息: {event.raw_text.splitlines()[0]}")
     await zq.zq_settle(client, event)
 
 
@@ -64,7 +64,7 @@ async def zq_user_handler(event):
 @client.on(
     events.NewMessage(chats=config.zq_group, pattern=r"转账成功.*", from_users=config.zq_bot))
 async def zq_shoot_handler(event):
-    logger.info("检测到转账成功消息")
+    # logger.info("检测到转账成功消息")
     await zq.zq_shoot(client, event)
 
 

@@ -677,8 +677,8 @@ async def zq_settle(client, event):
         mes += f"""🎯 **押注次数：{variable.total}**
 🏆 **胜率：{win_rate:.2f}%**\n"""
 
-    mes += f"""💰 **收益：{variable.earnings}**
-💰 **总余额：{variable.balance}**"""
+    mes += f"""💰 **收益：{variable.earnings/10000}万**
+💰 **总余额：{variable.balance/10000}万**"""
 
     # 发送结算面板
     try:
