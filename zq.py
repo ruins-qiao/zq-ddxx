@@ -294,11 +294,8 @@ def calculate_losses(cycles, initial, rate1, rate2, rate3, rate4):
         # 计算基础押注金额
         base_bet = current_bet * rate
 
-        # 计算并处理额外金额（下次金额的1%取500整倍数）
-        additional = closest_multiple_of_500((base_bet * 0.01))
-
-        # 更新押注金额（基础金额 + 处理后的额外金额）
-        current_bet = base_bet + additional
+        # 更新押注金额
+        current_bet = closest_multiple_of_500(base_bet)
 
     return total
 
@@ -510,10 +507,6 @@ def format_number_new(num):
     # 必须从最大的单位开始往下判断
     if num >= 100_000_000:
         return f"{num / 100_000_000:.2f}亿"
-    elif num >= 10_000_000:
-        return f"{num / 10_000_000:.2f}千万"
-    elif num >= 1_000_000:
-        return f"{num / 1_000_000:.2f}百万"
     elif num >= 10_000:
         return f"{num / 10_000:.2f}万"
     else:
