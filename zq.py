@@ -315,7 +315,6 @@ def next_trend(history):
         return history[-1]
     # 不相同按照占比押注
     # 获取列表总长度
-    history = [1]
     total_count = len(history[-variable.proportion:])
     # 统计 1 的数量
 
