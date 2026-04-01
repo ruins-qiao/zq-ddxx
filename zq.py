@@ -500,6 +500,25 @@ def count_consecutive(data):
 def format_counts(counts, label):
     return os.linesep.join([f"{key} 连“{label}” : {counts[key]} 次" for key in sorted(counts.keys(), reverse=True)])
 
+def format_number_new(num):
+    """
+    将正数格式化为带有中文单位（万、百万、千万、亿）的字符串，保留两位小数。
+    """
+    # 转换为浮点数以支持除法和格式化
+    num = float(num)
+
+    # 必须从最大的单位开始往下判断
+    if num >= 100_000_000:
+        return f"{num / 100_000_000:.2f}亿"
+    elif num >= 10_000_000:
+        return f"{num / 10_000_000:.2f}千万"
+    elif num >= 1_000_000:
+        return f"{num / 1_000_000:.2f}百万"
+    elif num >= 10_000:
+        return f"{num / 10_000:.2f}万"
+    else:
+        return f"{num:.0f}"
+
 
 async def zq_settle(client, event):
     if not event.pattern_match:
@@ -677,8 +696,8 @@ async def zq_settle(client, event):
         mes += f"""🎯 **押注次数：{variable.total}**
 🏆 **胜率：{win_rate:.2f}%**\n"""
 
-    mes += f"""💰 **收益：{variable.earnings/10000}万**
-💰 **总余额：{variable.balance/10000}万**"""
+    mes += f"""💰 **收益：{format_number_new(variable.earnings)}**
+💰 **总余额：{format_number_new(variable.balance)}**"""
 
     # 发送结算面板
     try:
