@@ -150,7 +150,9 @@ async def zq_user(client, event):
         if ys is not None:
             js_val = calculate_losses(ys["field2"], ys["amount"], ys["field3"], ys["field4"], ys["field5"],
                                       ys["field6"])
-            mes = f"累计需要资金：{int(js_val)}"
+            js_v = calculate_losses_v(ys["field2"], ys["amount"], ys["field3"], ys["field4"], ys["field5"],
+                                      ys["field6"])
+            mes = f"累计需要资金：{format_number_new(int(js_v))}\n最后一局需要资金：{format_number_new(int(js_val))}"
         else:
             mes = "策略不存在"
         await reply_temp(client, event, mes)
@@ -297,10 +299,29 @@ def calculate_losses(cycles, initial, rate1, rate2, rate3, rate4):
 
         # 更新押注金额
         current_bet = closest_multiple_of_500(base_bet)
-        if i == 10:
+        if i == (cycles-2):
             return current_bet
 
+def calculate_losses_v(cycles, initial, rate1, rate2, rate3, rate4):
+    total = 0
+    current_bet = initial
+    for i in range(cycles):
+        # 累加当前押注金额
+        total += current_bet
 
+        # 确定当前阶段倍数
+        if i < 3:
+            rate = [rate1, rate2, rate3][i]
+        else:
+            rate = rate4
+
+        # 计算基础押注金额
+        base_bet = current_bet * rate
+
+        # 更新押注金额
+        current_bet = closest_multiple_of_500(base_bet)
+
+    return current_bet
 
 def next_trend(history):
     """
@@ -671,6 +692,12 @@ async def zq_settle(client, event):
     # 构建结算面板内容
     reversed_data = ["✅" if x == 1 else "❌" for x in variable.history[-40:][::-1]]
 
+    total_count = len(variable.history[-variable.proportion:])
+    # 统计 1 的数量
+
+    ones_count = variable.history[-variable.proportion:].count(1)
+    # 计算 1 的占比
+    ratio_of_ones = ones_count / total_count
     mes = f"""
 📊 **近期 40 次结果**（由近及远）
 ✅：大（1）  ❌：小（0）
@@ -683,6 +710,7 @@ async def zq_settle(client, event):
 ⏹ **押注 {variable.lose_stop} 次停止**
 📉 ** 押注倍率 {variable.lose_once} / {variable.lose_twice} / {variable.lose_three} / {variable.lose_four} **
 🎯 ** {variable.chase}连追投 / 数据量：{variable.proportion} **\n
+📊 ** 大占比 {ratio_of_ones*100:.2f}% **\n
 """
 
     if variable.win_total > 0:
