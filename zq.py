@@ -28,7 +28,7 @@ async def reply_temp(client, event, text, delay=10, parse_mode="markdown", delet
     try:
         # logger.info(f"正在回复: {text.replace(os.linesep, ' ')[:50]}...")
         msg = await client.send_message(config.group, text, parse_mode=parse_mode)
-        # 创建删除任务 (用户消息 + 机器人回复)
+        # 创建删除任务 (用户消息 +机器人回复)
         if delete_trigger and event:
             asyncio.create_task(delete_later(client, event.chat_id, event.id, delay))
         asyncio.create_task(delete_later(client, msg.chat_id, msg.id, delay))
@@ -58,6 +58,7 @@ async def zq_user(client, event):
 - ys - 保存预设策略 (ys yc 3 3.0 3.0 3.0 3.0 10000)
 - yss - 查看或删除预设 (yss 或 yss dl yc)
 - js - 计算预设所需资金 (js ys1)
+- fx - 反向押注 (fx 1 500 开启并固定500 / fx 0 关闭)
 - h - 查看帮助```"""
         await reply_temp(client, event, help_message, delay=60)
 
@@ -145,6 +146,19 @@ async def zq_user(client, event):
         else:
             await reply_temp(client, event, "**暂无预设记录**")
 
+    async def cmd_fx():
+        if len(args) > 1:
+            switch = int(args[1])
+            if switch == 1 and len(args) > 2:
+                variable.reverse_switch = True
+                variable.reverse_amount = int(args[2])
+                await reply_temp(client, event, f"✅ 反向押注已开启，固定金额：{variable.reverse_amount}")
+            else:
+                variable.reverse_switch = False
+                await reply_temp(client, event, "❌ 反向押注已关闭")
+        else:
+            await reply_temp(client, event, "格式错误，请使用: fx 1 500 或 fx 0")
+
     async def cmd_js():
         ys = query_records(args[1])
         if ys is not None:
@@ -177,6 +191,7 @@ async def zq_user(client, event):
         "ys": cmd_ys,
         "yss": cmd_yss,
         "js": cmd_js,
+        "fx": cmd_fx,
         "start": cmd_start,
         "stop": cmd_stop
     }
@@ -242,6 +257,33 @@ class MessageDeduplicator:
         self.last_message = None
         self.last_timestamp = 0.0
 
+async def reverse_bet_func(check, com, event):
+    variable.reverse_total += 1
+    # 根据 check 决定使用哪组按钮映射 (True=大, False=小)
+    button_map = variable.big_button if check else variable.small_button
+    direction = "大" if check else "小"
+    variable.reverse_bet_type = 1 if check else 0
+
+    for c in com:
+        # 每个金额最大重试次数
+        max_retries = 5
+        for attempt in range(max_retries):
+            try:
+                res = await asyncio.wait_for(event.click(button_map[c]), timeout=10.0)
+                msg_text = res.message.replace('\n', ' ') if (
+                            res and hasattr(res, 'message') and res.message) else "无返回文本"
+                if "押注成功" in msg_text:
+                    break
+                if "操作过快" in msg_text or "系统繁忙" in msg_text:
+                    await asyncio.sleep(1)
+                    continue
+                break
+            except asyncio.TimeoutError:
+                await asyncio.sleep(1)
+            except Exception as e:
+                await asyncio.sleep(1)
+        await asyncio.sleep(1.0)
+
 
 async def zq_bet_on(client, event, deduplicator, functions):
     if deduplicator.should_process(event):
@@ -251,7 +293,7 @@ async def zq_bet_on(client, event, deduplicator, functions):
                 # logger.info(f"开始押注！")
                 # 获取压大还是小
                 check = next_trend(variable.history)
-                logger.info(f"本次押注：{"大" if check == 1 else "小"}")
+                logger.info(f"本次押注：{'大' if check == 1 else '小'}")
                 # 获取押注金额 根据连胜局数和底价进行计算
                 variable.bet_amount = calculate_bet_amount(variable.win_count, variable.lose_count,
                                                            variable.initial_amount,
@@ -270,10 +312,26 @@ async def zq_bet_on(client, event, deduplicator, functions):
                 variable.bet = True
                 await bet(check, com, event)
                 mes = f"""
-                            **⚡ 押注： {"押大" if check else "押小"}
+                            **⚡ 押注： {'押大' if check else '押小'}
         💵 金额： {variable.bet_amount}**
                             """
                 await reply_temp(client, event, mes, 60, delete_trigger=False)
+                
+                # ===== 新增：反向押注逻辑 =====
+                if getattr(variable, 'reverse_switch', False):
+                    rev_check = 0 if check else 1
+                    rev_com = find_combination(variable.reverse_amount)
+                    if rev_com and len(rev_com) > 0:
+                        variable.reverse_bet = True
+                        await reverse_bet_func(rev_check, rev_com, event)
+                        rev_mes = f"**🔄 反向押注： {'押大' if rev_check else '押小'}\n💵 金额： {variable.reverse_amount}**"
+                        await reply_temp(client, event, rev_mes, 60, delete_trigger=False)
+                    else:
+                        variable.reverse_bet = False
+                else:
+                    variable.reverse_bet = False
+                # ============================
+                
         else:
             variable.bet = False
 
@@ -585,6 +643,20 @@ async def zq_settle(client, event):
     else:
         # 未押注，记录状态为 3
         variable.lose_history.append(3)
+        
+    # ===== 新增：反向押注结算 =====
+    if getattr(variable, 'reverse_bet', False):
+        rev_is_win = (result_int == getattr(variable, 'reverse_bet_type', 0))
+        if rev_is_win:
+            variable.reverse_win_total += 1
+            variable.reverse_earnings += int(variable.reverse_amount * 0.99)
+            variable.balance += int(variable.reverse_amount * 0.99)
+            variable.reverse_bet_status = True
+        else:
+            variable.reverse_earnings -= variable.reverse_amount
+            variable.balance -= variable.reverse_amount
+            variable.reverse_bet_status = False
+    # ==============================
 
     # 维护 lose_history 长度
     if len(variable.lose_history) > 1000:
@@ -676,9 +748,13 @@ async def zq_settle(client, event):
         # 使用快照的 current_bet_amount
         amount_str = str(int(current_bet_amount * 0.99)) if variable.status else str(current_bet_amount)
 
-        mess = f"""**📉 输赢统计： {win_str} {amount_str}
-    🎲 结果： {result_str}**"""
-
+        mess = f"""**🎲 结果： {result_str}**\n"""
+        mess += f"""**📉 输赢统计： {win_str} {amount_str}**\n"""
+        if getattr(variable, 'reverse_bet', False):
+            rev_status_str = "赢" if getattr(variable, 'reverse_bet_status', False) else "输"
+            rev_win_amt = int(variable.reverse_amount * 0.99) if getattr(variable, 'reverse_bet_status',
+                                                                         False) else variable.reverse_amount
+            mess += f"""**🔄 反向统计： {rev_status_str} {rev_win_amt}**"""
         await reply_temp(client, event, mess, delay=60, delete_trigger=False)
 
     # --- 7. 发送每局结算信息 ---
@@ -709,17 +785,27 @@ async def zq_settle(client, event):
 💰 **初始金额：{variable.initial_amount}**
 ⏹ **押注 {variable.lose_stop} 次停止**
 📉 ** 押注倍率 {variable.lose_once} / {variable.lose_twice} / {variable.lose_three} / {variable.lose_four} **
-🎯 ** {variable.chase}连追投 / 数据量：{variable.proportion} **\n
+🎯 ** {variable.chase}连追投 / 数据量：{variable.proportion} **
+🔄 **反向押注: {"开启" if variable.reverse_switch else "关闭"} | 每次 {variable.reverse_amount}**\n
 📊 ** 大占比 {ratio_of_ones*100:.2f}% **\n
 """
+
 
     if variable.win_total > 0:
         win_rate = (variable.win_total / variable.total * 100) if variable.total > 0 else 0
         mes += f"""🎯 **押注次数：{variable.total}**
 🏆 **胜率：{win_rate:.2f}%**\n"""
+    # 新增：反向押注统计展示
+    if getattr(variable, 'reverse_total', 0) > 0:
+        mes += f"""🎯 **反向次数：{variable.reverse_total}**\n"""
+        mes += f"""🏆 **反向胜率：{variable.reverse_win_total / variable.reverse_total * 100:.2f}%**\n"""
+        mes += f"""💰 **反向收益：{variable.reverse_earnings}**\n"""
 
     mes += f"""💰 **收益：{format_number_new(variable.earnings)}**
 💰 **总余额：{format_number_new(variable.balance)}**"""
+
+
+
 
     # 发送结算面板
     try:
@@ -810,7 +896,7 @@ async def zq_shoot(client, event):
                              neg_count=1)
 
                 user = query_users(event.sender_id, user_id)
-                donation_list = f"大哥赏了你 {user["neg_count"]} 次 一共 {format_number(user["neg_amount"])} 爱心！\n 这可是我的血汗钱，别乱花哦"
+                donation_list = f"大哥赏了你 {user['neg_count']} 次 一共 {format_number(user['neg_amount'])} 爱心！\n 这可是我的血汗钱，别乱花哦"
                 ms = await client.send_message(event.chat_id, donation_list, reply_to=message2.id)
                 await asyncio.sleep(30)
                 await ms.delete()
@@ -845,7 +931,7 @@ async def zq_shoot(client, event):
                 index = next((i for i, item in enumerate(all_users) if item["user_id"] == user["user_id"]), -1)
                 # 生成捐赠榜文本
                 donation_list = f"```感谢 {user_name} 大佬赏赐的: {format_number(int(amount))} 爱心\n"
-                donation_list += f"大佬您共赏赐了小弟: {user["count"]} 次,共计: {format_number(user["amount"])} 爱心\n"
+                donation_list += f"大佬您共赏赐了小弟: {user['count']} 次,共计: {format_number(user['amount'])} 爱心\n"
                 # donation_list += f"您是{config.name}个人打赏总榜的Top: {index + 1}\n\n"
                 # donation_list += f"当前{config.name}个人总榜Top: 5 为\n"
                 # # 添加总榜 Top 5
@@ -855,7 +941,7 @@ async def zq_shoot(client, event):
                 #     am = item['amount']
                 #     donation_list += f"     总榜Top {i}: {mask_if_less(int(amount), config.top, name)} 大佬共赏赐小弟: {mask_if_less(int(amount), config.top, count)} 次,共计: {mask_if_less(int(amount), config.top, format_number(int(am)))} 爱心\n"
                 # donation_list += f"\n单次打赏>={format_number(config.top)}魔力查看打赏榜，感谢大佬，并期待您的下次打赏\n"
-                # donation_list += f"小弟给大佬您共孝敬了: {user["neg_count"]} 次,共计: {format_number(user["neg_amount"])} 爱心"
+                # donation_list += f"小弟给大佬您共孝敬了: {user['neg_count']} 次,共计: {format_number(user['neg_amount'])} 爱心"
                 # donation_list += f"\n二狗哥出品，必属精品```"
                 donation_list += f"```"
                 ms = await client.send_message(event.chat_id, donation_list, reply_to=message1.id)

@@ -84,3 +84,13 @@ lose_four = 1.0
 small_button = {500: 14, 2000: 12, 20000: 10, 50000: 8, 250000: 6, 1000000: 4, 5000000: 2, 50000000: 0}
 
 big_button = {500: 15, 2000: 13, 20000: 11, 50000: 9, 250000: 7, 1000000: 5, 5000000: 3, 50000000: 1}
+
+# --- 新增：反向押注专属变量 ---
+reverse_switch = False
+reverse_amount = 10000
+reverse_bet = False
+reverse_bet_type = 0
+reverse_bet_status = False
+reverse_total = 0
+reverse_win_total = 0
+reverse_earnings = 0
