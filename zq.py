@@ -58,7 +58,7 @@ async def zq_user(client, event):
 - ys - 保存预设策略 (ys yc 3 3.0 3.0 3.0 3.0 10000)
 - yss - 查看或删除预设 (yss 或 yss dl yc)
 - js - 计算预设所需资金 (js ys1)
-- fx - 反向押注 (fx 1 500 开启并固定500 / fx 0 关闭)
+- autofx - 自动反向 (autofx 1 500 51 49 50 开启 / autofx 0 关闭)
 - h - 查看帮助```"""
         await reply_temp(client, event, help_message, delay=60)
 
@@ -146,18 +146,22 @@ async def zq_user(client, event):
         else:
             await reply_temp(client, event, "**暂无预设记录**")
 
-    async def cmd_fx():
+    async def cmd_autofx():
         if len(args) > 1:
             switch = int(args[1])
-            if switch == 1 and len(args) > 2:
-                variable.reverse_switch = True
-                variable.reverse_amount = int(args[2])
-                await reply_temp(client, event, f"✅ 反向押注已开启，固定金额：{variable.reverse_amount}")
+            if switch == 1 and len(args) > 5:
+                variable.auto_reverse_switch = True
+                variable.auto_reverse_amount = int(args[2])
+                variable.auto_reverse_start_rate = float(args[3])
+                variable.auto_reverse_stop_rate = float(args[4])
+                variable.auto_reverse_min_rounds = int(args[5])
+                await reply_temp(client, event, f"✅ 自动反向已开启！\n- 金额: {variable.auto_reverse_amount}\n- 开启阈值: >= {variable.auto_reverse_start_rate}%\n- 停止阈值: < {variable.auto_reverse_stop_rate}%\n- 最小局数: {variable.auto_reverse_min_rounds}")
             else:
-                variable.reverse_switch = False
-                await reply_temp(client, event, "❌ 反向押注已关闭")
+                variable.auto_reverse_switch = False
+                variable.is_currently_reversing = False
+                await reply_temp(client, event, "❌ 自动反向已关闭")
         else:
-            await reply_temp(client, event, "格式错误，请使用: fx 1 500 或 fx 0")
+            await reply_temp(client, event, "格式错误，请使用: autofx 1 500 51.0 49.0 50 或 autofx 0")
 
     async def cmd_js():
         ys = query_records(args[1])
@@ -191,7 +195,7 @@ async def zq_user(client, event):
         "ys": cmd_ys,
         "yss": cmd_yss,
         "js": cmd_js,
-        "fx": cmd_fx,
+        "autofx": cmd_autofx,
         "start": cmd_start,
         "stop": cmd_stop
     }
@@ -261,7 +265,6 @@ async def reverse_bet_func(check, com, event):
     variable.reverse_total += 1
     # 根据 check 决定使用哪组按钮映射 (True=大, False=小)
     button_map = variable.big_button if check else variable.small_button
-    direction = "大" if check else "小"
     variable.reverse_bet_type = 1 if check else 0
 
     for c in com:
@@ -280,7 +283,7 @@ async def reverse_bet_func(check, com, event):
                 break
             except asyncio.TimeoutError:
                 await asyncio.sleep(1)
-            except Exception as e:
+            except Exception:
                 await asyncio.sleep(1)
         await asyncio.sleep(1.0)
 
@@ -288,6 +291,21 @@ async def reverse_bet_func(check, com, event):
 async def zq_bet_on(client, event, deduplicator, functions):
     if deduplicator.should_process(event):
         if variable.bet_on:
+            
+            # --- 自动反向总胜率判断逻辑 ---
+            if getattr(variable, 'auto_reverse_switch', False):
+                if variable.total >= getattr(variable, 'auto_reverse_min_rounds', 50) and variable.total > 0:
+                    current_win_rate = (variable.win_total / variable.total) * 100
+                    if current_win_rate >= getattr(variable, 'auto_reverse_start_rate', 51.0):
+                        variable.is_currently_reversing = True
+                    elif current_win_rate < getattr(variable, 'auto_reverse_stop_rate', 49.0):
+                        variable.is_currently_reversing = False
+                else:
+                    variable.is_currently_reversing = False
+            else:
+                variable.is_currently_reversing = False
+            # --------------------------
+            
             # 判断是否是开盘信息
             if event.reply_markup:
                 # logger.info(f"开始押注！")
@@ -317,14 +335,14 @@ async def zq_bet_on(client, event, deduplicator, functions):
                             """
                 await reply_temp(client, event, mes, 60, delete_trigger=False)
                 
-                # ===== 新增：反向押注逻辑 =====
-                if getattr(variable, 'reverse_switch', False):
+                # ===== 新增：自动反向押注逻辑 =====
+                if getattr(variable, 'is_currently_reversing', False):
                     rev_check = 0 if check else 1
-                    rev_com = find_combination(variable.reverse_amount)
+                    rev_com = find_combination(getattr(variable, 'auto_reverse_amount', 500))
                     if rev_com and len(rev_com) > 0:
                         variable.reverse_bet = True
                         await reverse_bet_func(rev_check, rev_com, event)
-                        rev_mes = f"**🔄 反向押注： {'押大' if rev_check else '押小'}\n💵 金额： {variable.reverse_amount}**"
+                        rev_mes = f"**🔄 自动反向： {'押大' if rev_check else '押小'}\n💵 金额： {getattr(variable, 'auto_reverse_amount', 500)}**"
                         await reply_temp(client, event, rev_mes, 60, delete_trigger=False)
                     else:
                         variable.reverse_bet = False
@@ -649,12 +667,12 @@ async def zq_settle(client, event):
         rev_is_win = (result_int == getattr(variable, 'reverse_bet_type', 0))
         if rev_is_win:
             variable.reverse_win_total += 1
-            variable.reverse_earnings += int(variable.reverse_amount * 0.99)
-            variable.balance += int(variable.reverse_amount * 0.99)
+            variable.reverse_earnings += int(getattr(variable, 'auto_reverse_amount', 500) * 0.99)
+            variable.balance += int(getattr(variable, 'auto_reverse_amount', 500) * 0.99)
             variable.reverse_bet_status = True
         else:
-            variable.reverse_earnings -= variable.reverse_amount
-            variable.balance -= variable.reverse_amount
+            variable.reverse_earnings -= getattr(variable, 'auto_reverse_amount', 500)
+            variable.balance -= getattr(variable, 'auto_reverse_amount', 500)
             variable.reverse_bet_status = False
     # ==============================
 
@@ -752,8 +770,8 @@ async def zq_settle(client, event):
         mess += f"""**📉 输赢统计： {win_str} {amount_str}**\n"""
         if getattr(variable, 'reverse_bet', False):
             rev_status_str = "赢" if getattr(variable, 'reverse_bet_status', False) else "输"
-            rev_win_amt = int(variable.reverse_amount * 0.99) if getattr(variable, 'reverse_bet_status',
-                                                                         False) else variable.reverse_amount
+            rev_win_amt = int(getattr(variable, 'auto_reverse_amount', 500) * 0.99) if getattr(variable, 'reverse_bet_status',
+                                                                         False) else getattr(variable, 'auto_reverse_amount', 500)
             mess += f"""**🔄 反向统计： {rev_status_str} {rev_win_amt}**"""
         await reply_temp(client, event, mess, delay=60, delete_trigger=False)
 
@@ -786,15 +804,22 @@ async def zq_settle(client, event):
 ⏹ **押注 {variable.lose_stop} 次停止**
 📉 ** 押注倍率 {variable.lose_once} / {variable.lose_twice} / {variable.lose_three} / {variable.lose_four} **
 🎯 ** {variable.chase}连追投 / 数据量：{variable.proportion} **
-🔄 **反向押注: {"开启" if variable.reverse_switch else "关闭"} | 每次 {variable.reverse_amount}**\n
-📊 ** 大占比 {ratio_of_ones*100:.2f}% **\n
 """
+    
+    if getattr(variable, 'auto_reverse_switch', False):
+        rev_status = "🟢 激活" if getattr(variable, 'is_currently_reversing', False) else "🔴 待机"
+        mes += f"""🔄 **自动反向: {rev_status}**\n🔄 **每次 {format_number_new(getattr(variable, 'auto_reverse_amount', 500))} | {getattr(variable, 'auto_reverse_start_rate', 51.0)}%~{getattr(variable, 'auto_reverse_stop_rate', 49.0)}% **\n"""
+    else:
+        mes += f"""🔄 **自动反向: 关闭**\n\n"""
+        
+    mes += f"""📊 ** 大占比 {ratio_of_ones*100:.2f}% **\n\n"""
 
 
     if variable.win_total > 0:
         win_rate = (variable.win_total / variable.total * 100) if variable.total > 0 else 0
         mes += f"""🎯 **押注次数：{variable.total}**
 🏆 **胜率：{win_rate:.2f}%**\n"""
+
     # 新增：反向押注统计展示
     if getattr(variable, 'reverse_total', 0) > 0:
         mes += f"""🎯 **反向次数：{variable.reverse_total}**\n"""

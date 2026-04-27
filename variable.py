@@ -85,12 +85,17 @@ small_button = {500: 14, 2000: 12, 20000: 10, 50000: 8, 250000: 6, 1000000: 4, 5
 
 big_button = {500: 15, 2000: 13, 20000: 11, 50000: 9, 250000: 7, 1000000: 5, 5000000: 3, 50000000: 1}
 
-# --- 新增：反向押注专属变量 ---
-reverse_switch = False
-reverse_amount = 10000
-reverse_bet = False
-reverse_bet_type = 0
-reverse_bet_status = False
-reverse_total = 0
-reverse_win_total = 0
-reverse_earnings = 0
+# --- 自动反向押注专属变量 ---
+auto_reverse_switch = False       # 自动反向总开关
+auto_reverse_amount = 500         # 反向押注固定金额
+auto_reverse_start_rate = 51.0    # 触发自动反向的胜率下限（大于等于）
+auto_reverse_stop_rate = 49.0     # 停止自动反向的胜率上限（小于）
+auto_reverse_min_rounds = 50      # 触发所需的最小总局数
+
+is_currently_reversing = False    # 当前是否处于自动反向激活状态
+reverse_bet = False               # 本局是否下了反向单
+reverse_bet_type = 0              # 反向单押了什么
+reverse_bet_status = False        # 反向单输赢
+reverse_total = 0                 # 反向总次数
+reverse_win_total = 0             # 反向总赢次数
+reverse_earnings = 0              # 反向总收益
