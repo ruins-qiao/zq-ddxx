@@ -310,7 +310,7 @@ async def zq_bet_on(client, event, deduplicator, functions):
             if event.reply_markup:
                 # logger.info(f"开始押注！")
                 # 获取压大还是小
-                check = next_trend(variable.history)
+                check = next_trend_z(variable.history)
                 logger.info(f"本次押注：{'大' if check == 1 else '小'}")
                 # 获取押注金额 根据连胜局数和底价进行计算
                 variable.bet_amount = calculate_bet_amount(variable.win_count, variable.lose_count,
@@ -423,6 +423,13 @@ def next_trend(history):
         return 0
     else:
         return 1
+
+
+def next_trend_z(history):
+    """
+    追投
+    """
+    return history[-1]
 
 
 def calculate_bet_amount(win_count, lose_count, initial_amount, lose_stop, lose_once, lose_twice, lose_three,
